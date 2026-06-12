@@ -1,5 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.agents.essay_agent import EssayAgent, EssayImproveResult
+from app.agents.outreach_agent import (
+    GenerateOutreachRequest,
+    OutreachAgent,
+    OutreachGenerateResult,
+)
+from app.agents.recommendation_agent import (
+    GenerateRecommendationRequest,
+    RecommendationAgent,
+    RecommendationGenerateResult,
+)
 from app.db.repository import GrantPilotRepository, get_repository
 from app.models import Application
 from app.services.application_service import ApplicationBundle, build_application_bundle
@@ -35,6 +46,52 @@ def get_application(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+
+
+@router.post("/{application_id}/improve-essay", response_model=EssayImproveResult)
+async def improve_application_essay(
+    application_id: str,
+    repository: GrantPilotRepository = Depends(get_repository),
+) -> EssayImproveResult:
+    agent = EssayAgent(repository)
+    try:
+        return await agent.improve_for_application(application_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/{application_id}/generate-recommendation", response_model=RecommendationGenerateResult)
+async def generate_application_recommendation(
+    application_id: str,
+    payload: GenerateRecommendationRequest | None = None,
+    repository: GrantPilotRepository = Depends(get_repository),
+) -> RecommendationGenerateResult:
+    agent = RecommendationAgent(repository)
+    try:
+        return await agent.generate_for_application(
+            application_id,
+            payload or GenerateRecommendationRequest(),
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.post("/{application_id}/generate-outreach", response_model=OutreachGenerateResult)
+async def generate_application_outreach(
+    application_id: str,
+    payload: GenerateOutreachRequest | None = None,
+    repository: GrantPilotRepository = Depends(get_repository),
+) -> OutreachGenerateResult:
+    agent = OutreachAgent(repository)
+    try:
+        return await agent.generate_for_application(
+            application_id,
+            payload or GenerateOutreachRequest(),
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.put("/{application_id}", response_model=Application)

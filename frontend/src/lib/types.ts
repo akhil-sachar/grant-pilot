@@ -85,13 +85,27 @@ export interface MatchResult {
   user_id: string;
   opportunity_id: string;
   score: number;
+  score_percent?: number;
   rationale: string;
   strengths: string[];
   gaps: string[];
   recommended_actions: string[];
+  priority: string;
+  missing_materials: string[];
+  fit_explanation: string;
+  funding_potential: string;
+  success_probability: number;
   status: string;
   metadata: Metadata;
   created_at: string;
+}
+
+export interface RankedOpportunity {
+  opportunity: Opportunity;
+  match: MatchResult;
+  success_probability: number;
+  score_percent: number;
+  priority: string;
 }
 
 export interface ApplicationChecklistItem {
@@ -124,8 +138,17 @@ export interface EssayVersion {
   version_number: number;
   status: string;
   feedback_notes: string[];
+  source_version_id?: string | null;
+  change_summary?: string;
   metadata: Metadata;
   created_at: string;
+}
+
+export interface EssayImproveResult {
+  essay_version: EssayVersion;
+  original_essay: string;
+  improvement_suggestions: string[];
+  change_summary: string;
 }
 
 export interface RecommendationDraft {
@@ -134,11 +157,22 @@ export interface RecommendationDraft {
   recommender_name: string;
   recommender_email: string;
   relationship: string;
+  recommender_type: string;
   draft_body: string;
+  version_number: number;
+  source_draft_id?: string | null;
+  key_talking_points: string[];
+  why_it_matches: string;
   status: string;
   metadata: Metadata;
   created_at: string;
   updated_at: string;
+}
+
+export interface RecommendationGenerateResult {
+  recommendation_draft: RecommendationDraft;
+  key_talking_points: string[];
+  why_it_matches: string;
 }
 
 export interface OutreachEmail {
@@ -189,12 +223,14 @@ export interface DashboardMetrics {
   upcoming_deadlines: number;
   average_match_score: number;
   agent_actions: number;
+  high_priority_matches?: number;
 }
 
 export interface DashboardResponse {
   profile: UserProfile;
   metrics: DashboardMetrics;
   top_matches: MatchResult[];
+  ranked_opportunities?: RankedOpportunity[];
   opportunities: Opportunity[];
   applications: GrantApplication[];
   documents: UploadedDocument[];
@@ -224,4 +260,38 @@ export interface RuntimeConfig {
     guild_ai_enabled: boolean;
     openui_enabled: boolean;
   };
+}
+
+export interface IngestionRun {
+  id: string;
+  source_name: string;
+  status: string;
+  records_seen: number;
+  records_loaded: number;
+  error_message?: string | null;
+  metadata: Metadata;
+  started_at: string;
+  completed_at?: string | null;
+}
+
+export interface SourceScanState {
+  source_name: string;
+  display_name: string;
+  category: string;
+  status: string;
+  opportunities_found: number;
+  last_scan_at?: string | null;
+  last_ingestion_run_id?: string | null;
+  error_message?: string | null;
+}
+
+export interface SponsorScanStatus {
+  is_scanning: boolean;
+  last_full_scan_at?: string | null;
+  total_opportunities: number;
+  sources: SourceScanState[];
+  recent_ingestion_runs: IngestionRun[];
+  airbyte_mode: string;
+  metadata: Metadata;
+  updated_at: string;
 }

@@ -45,6 +45,24 @@ export function percent(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
+export function scorePercent(match?: {
+  score: number;
+  score_percent?: number;
+  metadata?: Record<string, unknown>;
+}) {
+  if (!match) {
+    return "Not scored";
+  }
+  if (typeof match.score_percent === "number") {
+    return `${match.score_percent}%`;
+  }
+  const fromMeta = match.metadata?.score_percent;
+  if (typeof fromMeta === "number") {
+    return `${fromMeta}%`;
+  }
+  return percent(match.score);
+}
+
 export function checklistProgress(items: { status: string }[]) {
   if (items.length === 0) {
     return 0;

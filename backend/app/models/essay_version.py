@@ -20,7 +20,11 @@ class EssayVersion(APIModel):
     content: str
     version_number: int = Field(ge=1)
     status: EssayStatus = EssayStatus.DRAFT
-    feedback_notes: list[str] = Field(default_factory=list)
+    feedback_notes: list[str] = Field(
+        default_factory=list,
+        description="Improvement suggestions for this version",
+    )
+    source_version_id: str | None = None
+    change_summary: str = ""
     metadata: Metadata = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=utc_now)
-

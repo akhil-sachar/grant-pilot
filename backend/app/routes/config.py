@@ -2,6 +2,7 @@ from pydantic import Field
 from fastapi import APIRouter, Depends
 
 from app.config import Settings, get_settings
+from app.services.airbyte_service import AirbyteService
 from app.models import APIModel
 
 
@@ -35,7 +36,7 @@ def read_config(settings: Settings = Depends(get_settings)) -> RuntimeConfig:
         cors_origins=settings.cors_origins,
         integrations=IntegrationConfig(
             clickhouse_enabled=settings.clickhouse_enabled,
-            airbyte_enabled=not settings.demo_mode,
+            airbyte_enabled=AirbyteService(settings=settings).is_configured,
             composio_enabled=bool(settings.composio_api_key),
             guild_ai_enabled=not settings.demo_mode,
             openui_enabled=not settings.demo_mode,

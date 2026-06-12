@@ -1,4 +1,5 @@
 import { CheckCircle2, Circle, Clock3 } from "lucide-react";
+import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
@@ -35,7 +36,11 @@ export default async function ApplicationsPage() {
               <div className="grid gap-5 px-5 py-5 lg:grid-cols-[1fr_220px]">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-lg font-semibold">{opportunity?.title}</h2>
+                    <h2 className="text-lg font-semibold">
+                      <Link href={`/applications/${application.id}`} className="hover:text-spruce">
+                        {opportunity?.title}
+                      </Link>
+                    </h2>
                     <StatusPill status={application.status} />
                   </div>
                   <p className="mt-1 text-sm text-muted">{opportunity?.provider_name}</p>
@@ -55,6 +60,12 @@ export default async function ApplicationsPage() {
                     />
                   </div>
                   <p className="mt-3 text-sm text-muted">Due {formatDate(application.due_at)}</p>
+                  <Link
+                    href={`/applications/${application.id}`}
+                    className="mt-4 inline-flex text-sm font-semibold text-spruce hover:underline"
+                  >
+                    Open application detail
+                  </Link>
                 </div>
               </div>
 

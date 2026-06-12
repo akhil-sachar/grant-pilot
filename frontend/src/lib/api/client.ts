@@ -3,11 +3,14 @@ import type {
   ApplicationBundle,
   DocumentVersion,
   DashboardResponse,
+  EssayImproveResult,
   GrantApplication,
   MatchResult,
   Notification,
   Opportunity,
+  RecommendationGenerateResult,
   RuntimeConfig,
+  SponsorScanStatus,
   UploadedDocument,
   UserProfile,
 } from "@/lib/types";
@@ -23,6 +26,7 @@ import {
   mockOpportunities,
   mockProfile,
   mockRuntimeConfig,
+  mockSponsorScanStatus,
 } from "./mock-data";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -191,6 +195,27 @@ export async function getOpportunities(): Promise<Opportunity[]> {
   return request<Opportunity[]>("/opportunities");
 }
 
+export async function getSponsorScanStatus(): Promise<SponsorScanStatus> {
+  if (appConfig.demoMode) {
+    return mockSponsorScanStatus;
+  }
+  return request<SponsorScanStatus>("/sponsor/status");
+}
+
+export async function triggerSponsorScan(): Promise<{ status: string; summary: string }> {
+  if (appConfig.demoMode) {
+    return { status: "completed", summary: "Demo scan completed with mock data." };
+  }
+  return request<{ status: string; summary: string }>("/sponsor/scan", { method: "POST" });
+}
+
+export async function triggerMatching(): Promise<{ status: string; summary: string }> {
+  if (appConfig.demoMode) {
+    return { status: "completed", summary: "Demo matching completed with deterministic scores." };
+  }
+  return request<{ status: string; summary: string }>("/matching/run", { method: "POST" });
+}
+
 export async function getMatches(): Promise<MatchResult[]> {
   if (appConfig.demoMode) {
     return mockMatches;
@@ -214,6 +239,139 @@ export async function getApplicationBundle(id: string): Promise<ApplicationBundl
     return bundle;
   }
   return request<ApplicationBundle>(`/applications/${id}`);
+}
+
+export async function generateApplicationRecommendation(
+  applicationId: string,
+  payload: { recommender_type?: string; recommender_name?: string; recommender_email?: string } = {},
+): Promise<RecommendationGenerateResult> {
+  if (appConfig.demoMode) {
+    const bundle = mockApplicationBundles[applicationId];
+    if (!bundle) {
+      throw new Error(`Unknown mock application: ${applicationId}`);
+    }
+    const recommenderType = payload.recommender_type ?? "professor";
+    const defaults: Record<string, { name: string; email: string; relationship: string }> = {
+      professor: {
+        name: "Dr. Ana Patel",
+        email: "apatel@example.edu",
+        relationship: "Faculty research mentor",
+      },
+      advisor: {
+        name: "Jordan Lee",
+        email: "jlee@example.edu",
+        relationship: "Academic advisor",
+      },
+      mentor: {
+        name: "Sam Rivera",
+        email: "sam.rivera@example.org",
+        relationship: "Civic tech mentor",
+      },
+      manager: {
+        name: "Taylor Brooks",
+        email: "tbrooks@example.com",
+        relationship: "Project supervisor",
+      },
+    };
+    const recommender = defaults[recommenderType] ?? defaults.professor;
+    const nextVersion = bundle.recommendation_drafts.length + 1;
+    const result: RecommendationGenerateResult = {
+      key_talking_points: [
+        `${mockProfile.full_name}'s GPA ${mockProfile.gpa} and coursework in ${mockProfile.major}.`,
+        `Demonstrated execution on ${mockProfile.projects[0]}.`,
+        `Clear alignment with ${bundle.opportunity.title}.`,
+      ],
+      why_it_matches: `${mockProfile.full_name} meets ${bundle.opportunity.title} criteria through ${bundle.opportunity.eligibility_summary}`,
+      recommendation_draft: {
+        id: `rec_${applicationId}_v${nextVersion}_demo`,
+        application_id: applicationId,
+        recommender_name: payload.recommender_name ?? recommender.name,
+        recommender_email: payload.recommender_email ?? recommender.email,
+        relationship: recommender.relationship,
+        recommender_type: recommenderType,
+        draft_body: `[DRAFT FOR RECOMMENDER REVIEW — NOT FOR SUBMISSION]\nDear Selection Committee,\n\nI am pleased to recommend ${mockProfile.full_name} for ${bundle.opportunity.title}.\n\n${mockProfile.full_name} has shown strong preparation through civic technology projects and public policy coursework.\n\nSincerely,\n${recommender.name}\n${recommender.relationship}`,
+        version_number: nextVersion,
+        source_draft_id: bundle.recommendation_drafts.at(-1)?.id ?? null,
+        key_talking_points: [
+          `${mockProfile.full_name}'s academic record and relevant project work.`,
+          `Alignment with ${bundle.opportunity.provider_name}'s mission.`,
+        ],
+        why_it_matches: `Strong fit for ${bundle.opportunity.title} based on opportunity criteria.`,
+        status: "drafted",
+        metadata: {
+          agent: "recommendation-agent",
+          generation_method: "deterministic",
+          draft_for_recommender_review: true,
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    };
+    mockApplicationBundles[applicationId] = {
+      ...bundle,
+      recommendation_drafts: [...bundle.recommendation_drafts, result.recommendation_draft],
+    };
+    return result;
+  }
+  return request<RecommendationGenerateResult>(
+    `/applications/${applicationId}/generate-recommendation`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function improveApplicationEssay(applicationId: string): Promise<EssayImproveResult> {
+  if (appConfig.demoMode) {
+    const bundle = mockApplicationBundles[applicationId];
+    if (!bundle) {
+      throw new Error(`Unknown mock application: ${applicationId}`);
+    }
+    const original =
+      bundle.essay_versions.find((version) => Boolean(version.metadata.is_original))?.content ??
+      bundle.essay_versions[0]?.content ??
+      mockDocuments.find((doc) => doc.document_type === "essay")?.extracted_text ??
+      "";
+    const nextVersion = bundle.essay_versions.length + 1;
+    const result: EssayImproveResult = {
+      original_essay: original,
+      change_summary: `Added opportunity-specific opening and closing tailored to ${bundle.opportunity.title}; integrated profile themes and preserved the original narrative core.`,
+      improvement_suggestions: [
+        `Lead with a concrete story tied to ${bundle.opportunity.provider_name}'s mission.`,
+        "Name one measurable outcome from your civic technology project.",
+        "Tighten the closing paragraph to mirror the opportunity's evaluation criteria.",
+      ],
+      essay_version: {
+        id: `essay_${applicationId}_v${nextVersion}_demo`,
+        application_id: applicationId,
+        prompt: `Describe how your background aligns with ${bundle.opportunity.title}.`,
+        content: `When I learned about ${bundle.opportunity.title}, I saw a direct connection to my work in civic technology.\n\n${original}\n\nAward support would help me deepen this work and deliver outcomes aligned with ${bundle.opportunity.provider_name}'s mission.`,
+        version_number: nextVersion,
+        status: "review",
+        feedback_notes: [
+          `Lead with a concrete story tied to ${bundle.opportunity.provider_name}'s mission.`,
+          "Name one measurable outcome from your civic technology project.",
+        ],
+        source_version_id: bundle.essay_versions.at(-1)?.id ?? null,
+        change_summary: `Added opportunity-specific framing for ${bundle.opportunity.title}.`,
+        metadata: {
+          agent: "essay-agent",
+          generation_method: "deterministic",
+          opportunity_id: bundle.opportunity.id,
+        },
+        created_at: new Date().toISOString(),
+      },
+    };
+    mockApplicationBundles[applicationId] = {
+      ...bundle,
+      essay_versions: [...bundle.essay_versions, result.essay_version],
+    };
+    return result;
+  }
+  return request<EssayImproveResult>(`/applications/${applicationId}/improve-essay`, {
+    method: "POST",
+  });
 }
 
 export async function getNotifications(): Promise<Notification[]> {

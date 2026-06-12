@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +10,7 @@ from app.db.repository import get_repository
 from app.routes import (
     agent_actions,
     applications,
+    composio,
     config,
     dashboard,
     documents,
@@ -15,21 +18,34 @@ from app.routes import (
     health,
     ingestion_runs,
     matches,
+    matching,
     notifications,
     opportunities,
     outreach_emails,
     profile,
     recommendation_drafts,
     storage,
+    sponsor,
 )
+from app.workers.scan_scheduler import start_scan_scheduler, stop_scan_scheduler
 
 
 settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    get_repository().initialize()
+    start_scan_scheduler()
+    yield
+    await stop_scan_scheduler()
+
 
 app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
     description="GrantPilot API foundation with mock storage and stable contracts.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -47,19 +63,17 @@ app.include_router(profile.router, prefix=settings.api_prefix)
 app.include_router(documents.router, prefix=settings.api_prefix)
 app.include_router(opportunities.router, prefix=settings.api_prefix)
 app.include_router(matches.router, prefix=settings.api_prefix)
+app.include_router(matching.router, prefix=settings.api_prefix)
 app.include_router(applications.router, prefix=settings.api_prefix)
 app.include_router(essay_versions.router, prefix=settings.api_prefix)
 app.include_router(recommendation_drafts.router, prefix=settings.api_prefix)
 app.include_router(outreach_emails.router, prefix=settings.api_prefix)
+app.include_router(composio.router, prefix=settings.api_prefix)
 app.include_router(notifications.router, prefix=settings.api_prefix)
 app.include_router(agent_actions.router, prefix=settings.api_prefix)
 app.include_router(ingestion_runs.router, prefix=settings.api_prefix)
+app.include_router(sponsor.router, prefix=settings.api_prefix)
 app.include_router(storage.router, prefix=settings.api_prefix)
-
-
-@app.on_event("startup")
-def startup_storage() -> None:
-    get_repository().initialize()
 
 
 @app.exception_handler(ClickHouseStorageError)

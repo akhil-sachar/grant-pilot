@@ -8,9 +8,8 @@ class WorkerRunResult(APIModel):
 
 
 def run_once() -> WorkerRunResult:
-    return WorkerRunResult(
-        worker_name="sync-worker",
-        status="skipped",
-        message="External syncs are disabled until integrations are configured.",
-    )
+    import asyncio
 
+    from app.workers.scan_scheduler import run_sponsor_scan
+
+    return asyncio.run(run_sponsor_scan())

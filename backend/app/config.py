@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     clickhouse_password: str = ""
 
     airbyte_api_url: str = "http://localhost:8001/api/public/v1"
+    airbyte_api_key: str = ""
+    airbyte_workspace_id: str = ""
+    airbyte_connection_ids: dict[str, str] = Field(default_factory=dict)
+    sponsor_scan_enabled: bool = True
+    sponsor_scan_interval_seconds: int = 300
     composio_api_key: str = ""
     guild_home: str = ".guild"
     openui_url: str = "http://localhost:7878"

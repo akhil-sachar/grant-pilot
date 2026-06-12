@@ -8,6 +8,7 @@ import type {
   Notification,
   Opportunity,
   RuntimeConfig,
+  SponsorScanStatus,
   UploadedDocument,
   UserProfile,
 } from "@/lib/types";
@@ -224,13 +225,20 @@ export const mockMatches: MatchResult[] = [
     user_id: "usr_demo_001",
     opportunity_id: "opp_civic_ai",
     score: 0.92,
+    score_percent: 92,
     rationale:
       "Strong alignment with civic technology, public-interest software, and AI safety goals.",
     strengths: ["Civic tech portfolio", "Relevant coursework", "Clear public-benefit theme"],
     gaps: ["Portfolio link needs a stronger project outcome summary"],
     recommended_actions: ["Refresh resume impact bullets", "Draft 650-word personal statement"],
+    priority: "high",
+    missing_materials: ["Project portfolio"],
+    fit_explanation:
+      "Maya's civic technology projects and public policy coursework align strongly with this scholarship.",
+    funding_potential: "High — strong fit for $2,500–$10,000",
+    success_probability: 0.88,
     status: "in_application",
-    metadata: {},
+    metadata: { scoring_method: "deterministic", score_percent: 92 },
     created_at: "2026-06-09T15:00:00Z",
   },
   {
@@ -238,12 +246,19 @@ export const mockMatches: MatchResult[] = [
     user_id: "usr_demo_001",
     opportunity_id: "opp_open_grant",
     score: 0.84,
+    score_percent: 84,
     rationale: "Research interests and open data experience fit the grant goals.",
     strengths: ["Open data project idea", "Public policy minor"],
     gaps: ["Needs faculty reference confirmed", "Budget not started"],
     recommended_actions: ["Ask faculty mentor", "Create one-page research budget"],
+    priority: "high",
+    missing_materials: ["Budget", "Faculty reference"],
+    fit_explanation:
+      "Open data research interests and policy background map well to the grant's civic data focus.",
+    funding_potential: "High — strong fit for up to $5,000",
+    success_probability: 0.79,
     status: "saved",
-    metadata: {},
+    metadata: { scoring_method: "deterministic", score_percent: 84 },
     created_at: "2026-06-10T10:10:00Z",
   },
   {
@@ -251,13 +266,20 @@ export const mockMatches: MatchResult[] = [
     user_id: "usr_demo_001",
     opportunity_id: "opp_first_gen",
     score: 0.78,
+    score_percent: 78,
     rationale:
       "Eligibility is strong, but application materials need tailoring for STEM award criteria.",
     strengths: ["First-generation eligibility", "STEM program"],
     gaps: ["Financial need statement missing"],
     recommended_actions: ["Upload financial aid summary", "Draft short essay"],
+    priority: "medium",
+    missing_materials: ["Financial need statement"],
+    fit_explanation:
+      "First-generation STEM eligibility is a strong fit; financial documentation still needed.",
+    funding_potential: "Medium — competitive for $1,500–$4,000",
+    success_probability: 0.71,
     status: "new",
-    metadata: {},
+    metadata: { scoring_method: "deterministic", score_percent: 78 },
     created_at: "2026-06-11T09:25:00Z",
   },
 ];
@@ -354,8 +376,25 @@ export const mockDashboard: DashboardResponse = {
     average_match_score:
       mockMatches.reduce((total, match) => total + match.score, 0) / mockMatches.length,
     agent_actions: mockAgentActions.length,
+    high_priority_matches: mockMatches.filter((match) => match.priority === "high").length,
   },
   top_matches: mockMatches,
+  ranked_opportunities: mockMatches
+    .map((match) => {
+      const opportunity = mockOpportunities.find((item) => item.id === match.opportunity_id);
+      if (!opportunity) {
+        return null;
+      }
+      return {
+        opportunity,
+        match,
+        success_probability: match.success_probability,
+        score_percent: match.score_percent ?? Math.round(match.score * 100),
+        priority: match.priority,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .sort((a, b) => b.success_probability - a.success_probability),
   opportunities: mockOpportunities,
   applications: mockApplications,
   documents: mockDocuments,
@@ -399,7 +438,7 @@ export const mockApplicationBundles: Record<string, ApplicationBundle> = {
         version_number: 1,
         status: "outline",
         feedback_notes: ["Add a concrete beneficiary story", "Quantify prototype usage"],
-        metadata: {},
+        metadata: { is_original: true, agent: "essay-agent" },
         created_at: "2026-06-11T10:00:00Z",
       },
     ],
@@ -417,9 +456,17 @@ export const mockApplicationBundles: Record<string, ApplicationBundle> = {
         recommender_name: "Dr. Ana Patel",
         recommender_email: "apatel@example.edu",
         relationship: "Faculty research mentor",
-        draft_body: "Short request draft for a research-focused recommendation.",
+        recommender_type: "professor",
+        draft_body:
+          "[DRAFT FOR RECOMMENDER REVIEW — NOT FOR SUBMISSION]\nShort request draft for a research-focused recommendation.",
+        version_number: 1,
+        key_talking_points: [
+          "Strong research preparation in public-sector data systems.",
+          "Consistent follow-through on open data coursework.",
+        ],
+        why_it_matches: "Student research interests align with the Open Data Research Grant criteria.",
         status: "drafted",
-        metadata: {},
+        metadata: { draft_for_recommender_review: true, agent: "recommendation-agent" },
         created_at: "2026-06-10T12:30:00Z",
         updated_at: "2026-06-10T12:30:00Z",
       },
@@ -440,4 +487,99 @@ export const mockApplicationBundles: Record<string, ApplicationBundle> = {
       },
     ],
   },
+};
+
+export const mockSponsorScanStatus: SponsorScanStatus = {
+  is_scanning: false,
+  last_full_scan_at: "2026-06-12T08:00:00Z",
+  total_opportunities: mockOpportunities.length,
+  airbyte_mode: "mock",
+  metadata: {},
+  updated_at: "2026-06-12T08:05:00Z",
+  sources: [
+    {
+      source_name: "grants_gov",
+      display_name: "Grants Gov",
+      category: "federal_grant",
+      status: "completed",
+      opportunities_found: 2,
+      last_scan_at: "2026-06-12T08:00:00Z",
+    },
+    {
+      source_name: "nsf",
+      display_name: "Nsf",
+      category: "research_grant",
+      status: "completed",
+      opportunities_found: 2,
+      last_scan_at: "2026-06-12T08:00:00Z",
+    },
+    {
+      source_name: "nih",
+      display_name: "Nih",
+      category: "health_research",
+      status: "completed",
+      opportunities_found: 1,
+      last_scan_at: "2026-06-12T08:00:00Z",
+    },
+    {
+      source_name: "sbir_sttr",
+      display_name: "Sbir Sttr",
+      category: "sbir_sttr",
+      status: "completed",
+      opportunities_found: 2,
+      last_scan_at: "2026-06-12T08:00:00Z",
+    },
+    {
+      source_name: "yc_grants",
+      display_name: "Yc Grants",
+      category: "startup_grant",
+      status: "completed",
+      opportunities_found: 1,
+      last_scan_at: "2026-06-12T08:00:00Z",
+    },
+    {
+      source_name: "foundation_directories",
+      display_name: "Foundation Directories",
+      category: "foundation",
+      status: "completed",
+      opportunities_found: 2,
+      last_scan_at: "2026-06-12T08:00:00Z",
+    },
+    {
+      source_name: "university_grants",
+      display_name: "University Grants",
+      category: "university",
+      status: "completed",
+      opportunities_found: 2,
+      last_scan_at: "2026-06-12T08:00:00Z",
+    },
+    {
+      source_name: "scholarships",
+      display_name: "Scholarships",
+      category: "scholarship",
+      status: "completed",
+      opportunities_found: 2,
+      last_scan_at: "2026-06-12T08:00:00Z",
+    },
+    {
+      source_name: "corporate_innovation",
+      display_name: "Corporate Innovation",
+      category: "corporate",
+      status: "completed",
+      opportunities_found: 2,
+      last_scan_at: "2026-06-12T08:00:00Z",
+    },
+  ],
+  recent_ingestion_runs: [
+    {
+      id: "ingest_grants_gov_demo",
+      source_name: "grants_gov",
+      status: "completed",
+      records_seen: 2,
+      records_loaded: 2,
+      metadata: { mode: "mock" },
+      started_at: "2026-06-12T08:00:00Z",
+      completed_at: "2026-06-12T08:00:05Z",
+    },
+  ],
 };

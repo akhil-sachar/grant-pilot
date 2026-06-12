@@ -5,6 +5,7 @@ import {
   ListChecks,
   Radar,
   Sparkles,
+  Trophy,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -18,19 +19,26 @@ import {
   formatCurrency,
   formatDate,
   percent,
+  scorePercent,
 } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const dashboard = await getDashboard();
-  const opportunityById = new Map(
-    dashboard.opportunities.map((opportunity) => [opportunity.id, opportunity]),
-  );
+  const ranked =
+    dashboard.ranked_opportunities ??
+    dashboard.top_matches.map((match) => ({
+      match,
+      opportunity: dashboard.opportunities.find((item) => item.id === match.opportunity_id)!,
+      success_probability: match.success_probability,
+      score_percent: Math.round(match.score * 100),
+      priority: match.priority,
+    }));
 
   return (
     <AppShell>
       <PageHeader
         title={`Welcome back, ${dashboard.profile.full_name.split(" ")[0]}`}
-        description="Track your strongest funding paths, current applications, document readiness, and review queue."
+        description="Opportunities ranked by probability of success, plus your application pipeline and document readiness."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -41,10 +49,10 @@ export default async function DashboardPage() {
           icon={Sparkles}
         />
         <MetricCard
-          label="Active Applications"
-          value={dashboard.metrics.active_applications}
-          helper="Planned or in progress"
-          icon={FolderKanban}
+          label="High Priority Matches"
+          value={dashboard.metrics.high_priority_matches ?? 0}
+          helper="Deterministic MatchingAgent scores"
+          icon={Trophy}
         />
         <MetricCard
           label="Upcoming Deadlines"
@@ -53,15 +61,21 @@ export default async function DashboardPage() {
           icon={CalendarClock}
         />
         <MetricCard
-          label="Match Scores"
+          label="Avg Match Score"
           value={percent(dashboard.metrics.average_match_score)}
           helper={`${dashboard.metrics.agent_actions} agent actions logged`}
           icon={Radar}
         />
         <MetricCard
+          label="Active Applications"
+          value={dashboard.metrics.active_applications}
+          helper="Planned or in progress"
+          icon={FolderKanban}
+        />
+        <MetricCard
           label="Agent Actions"
           value={dashboard.metrics.agent_actions}
-          helper="Logs only; agents are not enabled"
+          helper="Sponsor + matching runs"
           icon={ListChecks}
         />
       </div>
@@ -69,36 +83,49 @@ export default async function DashboardPage() {
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
         <section className="rounded-lg border border-line bg-panel shadow-soft">
           <div className="border-b border-line px-5 py-4">
-            <h2 className="text-base font-semibold">Top matches</h2>
+            <h2 className="text-base font-semibold">Success probability ranking</h2>
+            <p className="mt-1 text-sm text-muted">
+              Sorted by likelihood of winning based on fit, materials, and deadlines.
+            </p>
           </div>
           <div className="divide-y divide-line">
-            {dashboard.top_matches.map((match) => {
-              const opportunity = opportunityById.get(match.opportunity_id);
-              return (
-                <div key={match.id} className="grid gap-4 px-5 py-4 md:grid-cols-[1fr_auto]">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold">{opportunity?.title ?? "Opportunity"}</h3>
-                      <StatusPill status={match.status} />
-                    </div>
-                    <p className="mt-1 text-sm text-muted">{opportunity?.provider_name}</p>
-                    <p className="mt-3 text-sm leading-6 text-muted">{match.rationale}</p>
-                    <div className="mt-3">
-                      <TagList tags={opportunity?.tags ?? []} />
-                    </div>
+            {ranked.map(({ match, opportunity, success_probability, priority }) => (
+              <div key={match.id} className="grid gap-4 px-5 py-4 md:grid-cols-[1fr_auto]">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold">{opportunity?.title ?? "Opportunity"}</h3>
+                    <StatusPill status={priority} />
+                    <StatusPill status={match.status} />
                   </div>
-                  <div className="flex min-w-28 flex-col items-start md:items-end">
-                    <p className="text-2xl font-semibold text-spruce">{percent(match.score)}</p>
-                    <p className="text-sm text-muted">
-                      {formatCurrency(opportunity?.amount_min, opportunity?.amount_max)}
+                  <p className="mt-1 text-sm text-muted">{opportunity?.provider_name}</p>
+                  <p className="mt-3 text-sm leading-6 text-muted">
+                    {match.fit_explanation || match.rationale}
+                  </p>
+                  {match.recommended_actions.length ? (
+                    <p className="mt-2 text-sm text-ink">
+                      Next: {match.recommended_actions[0]}
                     </p>
-                    <p className="mt-2 text-sm text-muted">
-                      {formatDate(opportunity?.deadline)}
-                    </p>
+                  ) : null}
+                  <div className="mt-3">
+                    <TagList tags={opportunity?.tags ?? []} />
                   </div>
                 </div>
-              );
-            })}
+                <div className="flex min-w-32 flex-col items-start md:items-end">
+                  <p className="text-xs uppercase text-muted">Success probability</p>
+                  <p className="text-2xl font-semibold text-spruce">
+                    {percent(success_probability)}
+                  </p>
+                  <p className="mt-2 text-sm text-muted">Match {scorePercent(match)}</p>
+                  <p className="text-sm text-muted">
+                    {match.funding_potential ||
+                      formatCurrency(opportunity?.amount_min, opportunity?.amount_max)}
+                  </p>
+                  <p className="mt-2 text-sm text-muted">
+                    {formatDate(opportunity?.deadline)}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -137,7 +164,9 @@ export default async function DashboardPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {dashboard.applications.map((application) => {
-                const opportunity = opportunityById.get(application.opportunity_id);
+                const opportunity = dashboard.opportunities.find(
+                  (item) => item.id === application.opportunity_id,
+                );
                 const progress = checklistProgress(application.checklist);
                 return (
                   <tr key={application.id}>

@@ -14,6 +14,7 @@ from app.models import (
     EssayVersion,
     IngestionRun,
     IngestionRunStatus,
+    MatchPriority,
     MatchResult,
     MatchStatus,
     Notification,
@@ -24,6 +25,7 @@ from app.models import (
     OutreachEmailStatus,
     RecommendationDraft,
     RecommendationStatus,
+    RecommenderType,
     UploadedDocument,
     UserProfile,
 )
@@ -247,7 +249,13 @@ def build_seed_data() -> dict[str, list[dict]]:
             strengths=["Civic tech portfolio", "Relevant coursework", "Clear public-benefit theme"],
             gaps=["Portfolio link needs a stronger project outcome summary"],
             recommended_actions=["Refresh resume impact bullets", "Draft 650-word personal statement"],
+            priority=MatchPriority.HIGH,
+            missing_materials=["Project portfolio"],
+            fit_explanation="Maya's civic technology projects and public policy coursework align strongly with this scholarship.",
+            funding_potential="High — strong fit for $2,500–$10,000",
+            success_probability=0.88,
             status=MatchStatus.IN_APPLICATION,
+            metadata={"scoring_method": "deterministic", "score_percent": 92},
             created_at=_dt("2026-06-09T15:00:00"),
         ),
         MatchResult(
@@ -259,7 +267,13 @@ def build_seed_data() -> dict[str, list[dict]]:
             strengths=["Open data project idea", "Public policy minor"],
             gaps=["Needs faculty reference confirmed", "Budget not started"],
             recommended_actions=["Ask faculty mentor", "Create one-page research budget"],
+            priority=MatchPriority.HIGH,
+            missing_materials=["Budget", "Faculty reference"],
+            fit_explanation="Open data research interests and policy background map well to the grant's civic data focus.",
+            funding_potential="High — strong fit for up to $5,000",
+            success_probability=0.79,
             status=MatchStatus.SAVED,
+            metadata={"scoring_method": "deterministic", "score_percent": 84},
             created_at=_dt("2026-06-10T10:10:00"),
         ),
         MatchResult(
@@ -271,7 +285,13 @@ def build_seed_data() -> dict[str, list[dict]]:
             strengths=["First-generation eligibility", "STEM program"],
             gaps=["Financial need statement missing"],
             recommended_actions=["Upload financial aid summary", "Draft short essay"],
+            priority=MatchPriority.MEDIUM,
+            missing_materials=["Financial need statement"],
+            fit_explanation="First-generation STEM eligibility is a strong fit; financial documentation still needed.",
+            funding_potential="Medium — competitive for $1,500–$4,000",
+            success_probability=0.71,
             status=MatchStatus.NEW,
+            metadata={"scoring_method": "deterministic", "score_percent": 78},
             created_at=_dt("2026-06-11T09:25:00"),
         ),
     ]
@@ -319,6 +339,7 @@ def build_seed_data() -> dict[str, list[dict]]:
             version_number=1,
             status=EssayStatus.OUTLINE,
             feedback_notes=["Add a concrete beneficiary story", "Quantify prototype usage"],
+            metadata={"is_original": True, "agent": "essay-agent"},
             created_at=_dt("2026-06-11T10:00:00"),
         )
     ]
@@ -330,8 +351,19 @@ def build_seed_data() -> dict[str, list[dict]]:
             recommender_name="Dr. Ana Patel",
             recommender_email="apatel@example.edu",
             relationship="Faculty research mentor",
-            draft_body="Short request draft for a research-focused recommendation.",
+            recommender_type=RecommenderType.PROFESSOR,
+            draft_body=(
+                "[DRAFT FOR RECOMMENDER REVIEW — NOT FOR SUBMISSION]\n"
+                "Short request draft for a research-focused recommendation."
+            ),
+            version_number=1,
+            key_talking_points=[
+                "Strong research preparation in public-sector data systems.",
+                "Consistent follow-through on open data coursework.",
+            ],
+            why_it_matches="Student research interests align with the Open Data Research Grant criteria.",
             status=RecommendationStatus.DRAFTED,
+            metadata={"draft_for_recommender_review": True, "agent": "recommendation-agent"},
             created_at=_dt("2026-06-10T12:30:00"),
             updated_at=_dt("2026-06-10T12:30:00"),
         )

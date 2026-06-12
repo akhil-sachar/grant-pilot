@@ -712,6 +712,51 @@ class ClickHouseService:
         elif config.table_name == "applications":
             row["checklist_json"] = _json_dump(data.get("checklist", []))
             row["metadata_json"] = _json_dump(data.get("metadata"))
+        elif config.table_name == "match_results":
+            meta = dict(data.get("metadata") or {})
+            meta.update(
+                {
+                    "priority": data.get("priority"),
+                    "missing_materials": data.get("missing_materials", []),
+                    "fit_explanation": data.get("fit_explanation", ""),
+                    "funding_potential": data.get("funding_potential", ""),
+                    "success_probability": data.get("success_probability", 0),
+                }
+            )
+            row["metadata_json"] = _json_dump(meta)
+        elif config.table_name == "essay_versions":
+            meta = dict(data.get("metadata") or {})
+            meta.update(
+                {
+                    "source_version_id": data.get("source_version_id"),
+                    "change_summary": data.get("change_summary", ""),
+                }
+            )
+            row["metadata_json"] = _json_dump(meta)
+        elif config.table_name == "recommendation_drafts":
+            meta = dict(data.get("metadata") or {})
+            meta.update(
+                {
+                    "recommender_type": data.get("recommender_type"),
+                    "version_number": data.get("version_number", 1),
+                    "source_draft_id": data.get("source_draft_id"),
+                    "key_talking_points": data.get("key_talking_points", []),
+                    "why_it_matches": data.get("why_it_matches", ""),
+                }
+            )
+            row["metadata_json"] = _json_dump(meta)
+        elif config.table_name == "outreach_emails":
+            meta = dict(data.get("metadata") or {})
+            meta.update(
+                {
+                    "recipient_role": data.get("recipient_role"),
+                    "email_type": data.get("email_type"),
+                    "suggested_follow_up": data.get("suggested_follow_up", ""),
+                    "version_number": data.get("version_number", 1),
+                    "source_email_id": data.get("source_email_id"),
+                }
+            )
+            row["metadata_json"] = _json_dump(meta)
         else:
             row["metadata_json"] = _json_dump(data.get("metadata"))
 
@@ -731,6 +776,38 @@ class ClickHouseService:
             data["metadata"] = _json_load(data.pop("metadata_json", None), {})
             data["due_at"] = _nullable_datetime(data.get("due_at"))
             data["submitted_at"] = _nullable_datetime(data.get("submitted_at"))
+        elif config.table_name == "match_results":
+            meta = _json_load(data.pop("metadata_json", None), {})
+            data["priority"] = meta.pop("priority", "medium")
+            data["missing_materials"] = meta.pop("missing_materials", [])
+            data["fit_explanation"] = meta.pop("fit_explanation", "")
+            data["funding_potential"] = meta.pop("funding_potential", "")
+            data["success_probability"] = meta.pop("success_probability", 0)
+            data["metadata"] = meta
+        elif config.table_name == "essay_versions":
+            meta = _json_load(data.pop("metadata_json", None), {})
+            source_version_id = meta.pop("source_version_id", None)
+            if source_version_id is None:
+                source_version_id = data.get("source_version_id")
+            data["source_version_id"] = source_version_id
+            data["change_summary"] = meta.pop("change_summary", data.get("change_summary", ""))
+            data["metadata"] = meta
+        elif config.table_name == "recommendation_drafts":
+            meta = _json_load(data.pop("metadata_json", None), {})
+            data["recommender_type"] = meta.pop("recommender_type", "professor")
+            data["version_number"] = meta.pop("version_number", data.get("version_number", 1))
+            data["source_draft_id"] = meta.pop("source_draft_id", data.get("source_draft_id"))
+            data["key_talking_points"] = meta.pop("key_talking_points", [])
+            data["why_it_matches"] = meta.pop("why_it_matches", "")
+            data["metadata"] = meta
+        elif config.table_name == "outreach_emails":
+            meta = _json_load(data.pop("metadata_json", None), {})
+            data["recipient_role"] = meta.pop("recipient_role", "professor")
+            data["email_type"] = meta.pop("email_type", "recommendation_request")
+            data["suggested_follow_up"] = meta.pop("suggested_follow_up", "")
+            data["version_number"] = meta.pop("version_number", data.get("version_number", 1))
+            data["source_email_id"] = meta.pop("source_email_id", data.get("source_email_id"))
+            data["metadata"] = meta
         else:
             data["metadata"] = _json_load(data.pop("metadata_json", None), {})
 
