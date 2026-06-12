@@ -38,9 +38,14 @@ class Settings(BaseSettings):
     airbyte_connection_ids: dict[str, str] = Field(default_factory=dict)
     sponsor_scan_enabled: bool = True
     sponsor_scan_interval_seconds: int = 300
+    notification_scan_enabled: bool = True
+    notification_scan_interval_seconds: int = 180
     composio_api_key: str = ""
     guild_home: str = ".guild"
+    guild_ai_enabled: bool = True
     openui_url: str = "http://localhost:7878"
+    openui_enabled: bool = True
+    demo_auto_run: bool = False
 
     @field_validator("cors_origins", mode="before")
     @classmethod

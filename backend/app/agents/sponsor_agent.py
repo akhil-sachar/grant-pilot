@@ -4,7 +4,8 @@ from app.adapters.funding.normalizer import normalize_opportunity
 from app.adapters.funding.registry import get_all_adapters
 from app.agents.base import AgentContext, AgentResult, BaseAgent
 from app.db.repository import GrantPilotRepository
-from app.models import AgentActionLog, AgentActionStatus, Opportunity
+from app.models import AgentActionStatus, Opportunity
+from app.services.agent_run_tracker import get_agent_run_tracker
 from app.services.airbyte_service import AirbyteService
 from app.services.scan_state import get_scan_tracker
 
@@ -27,16 +28,13 @@ class SponsorAgent(BaseAgent):
         return await self.scan_all(context.user_id)
 
     async def scan_all(self, user_id: str = "usr_demo_001") -> AgentResult:
-        action_id = f"agent_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
-        action_log = AgentActionLog(
-            id=action_id,
-            user_id=user_id,
-            agent_name=self.name,
-            action_type="full_scan",
-            status=AgentActionStatus.STARTED,
-            input_summary="Scanning all configured funding sources",
+        tracker = get_agent_run_tracker(self.repository)
+        action_id = tracker.start(
+            user_id,
+            self.name,
+            "full_scan",
+            "Scanning all configured funding sources",
         )
-        self.repository.create_record(action_log)
 
         airbyte_mode = "airbyte" if self.airbyte.is_configured else "mock"
         self.tracker.begin_full_scan(airbyte_mode=airbyte_mode)
@@ -81,13 +79,14 @@ class SponsorAgent(BaseAgent):
             if not errors
             else f"Scan finished with {len(errors)} errors. Loaded {total_loaded} opportunities."
         )
-        self.repository.update_record(
-            AgentActionLog,
+        tracker.finish(
             action_id,
-            {
-                "status": status,
-                "output_summary": summary,
-                "metadata": {"errors": errors, "sources_scanned": sources_scanned},
+            status=status,
+            output_summary=summary,
+            metadata={
+                "errors": errors,
+                "sources_scanned": sources_scanned,
+                "total_loaded": total_loaded,
             },
         )
 

@@ -3,9 +3,11 @@
 import {
   Bell,
   BriefcaseBusiness,
+  Bot,
   FileText,
   Home,
   LayoutDashboard,
+  Sparkles,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -15,6 +17,8 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/demo", label: "Demo", icon: Sparkles },
+  { href: "/agents", label: "Agents", icon: Bot },
   { href: "/profile", label: "Profile", icon: UserRound },
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/opportunities", label: "Opportunities", icon: Home },
@@ -56,4 +60,3 @@ export function SidebarNav({ mobile = false }: { mobile?: boolean }) {
     </nav>
   );
 }
-

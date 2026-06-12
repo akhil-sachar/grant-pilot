@@ -4,6 +4,7 @@ services:
     env: python
     rootDir: backend
     plan: free
+    healthCheckPath: /health
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -11,6 +12,24 @@ services:
         value: production
       - key: DEMO_MODE
         value: true
+      - key: DEMO_AUTO_RUN
+        value: false
+      - key: GUILD_AI_ENABLED
+        value: true
+      - key: OPENUI_ENABLED
+        value: true
+      - key: CLICKHOUSE_ENABLED
+        value: false
+      - key: CLICKHOUSE_FALLBACK_ENABLED
+        value: true
+      - key: SPONSOR_SCAN_ENABLED
+        value: true
+      - key: SPONSOR_SCAN_INTERVAL_SECONDS
+        value: 300
+      - key: NOTIFICATION_SCAN_ENABLED
+        value: true
+      - key: NOTIFICATION_SCAN_INTERVAL_SECONDS
+        value: 180
       - key: CORS_ORIGINS
         fromService:
           type: web
@@ -22,6 +41,7 @@ services:
     env: node
     rootDir: frontend
     plan: free
+    healthCheckPath: /
     buildCommand: npm install && npm run build
     startCommand: npm run start
     envVars:
@@ -34,4 +54,3 @@ services:
           type: web
           name: grantpilot-api
           property: host
-

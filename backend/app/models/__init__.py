@@ -9,7 +9,7 @@ from app.models.base import APIModel, Metadata, RecordStatus, TimestampedModel
 from app.models.essay_version import EssayStatus, EssayVersion
 from app.models.ingestion_run import IngestionRun, IngestionRunStatus
 from app.models.match_result import MatchPriority, MatchResult, MatchStatus
-from app.models.notification import Notification, NotificationType
+from app.models.notification import Notification, NotificationPriority, NotificationType
 from app.models.opportunity import Opportunity, OpportunityType
 from app.models.outreach_email import (
     EmailType,
@@ -53,6 +53,7 @@ __all__ = [
     "MatchStatus",
     "Metadata",
     "Notification",
+    "NotificationPriority",
     "NotificationType",
     "Opportunity",
     "OpportunityType",

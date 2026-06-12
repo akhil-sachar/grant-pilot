@@ -222,6 +222,7 @@ export interface Notification {
   title: string;
   message: string;
   notification_type: string;
+  priority: string;
   is_read: boolean;
   action_url?: string | null;
   metadata: Metadata;
@@ -280,6 +281,7 @@ export interface RuntimeConfig {
   app_env: string;
   api_prefix: string;
   demo_mode: boolean;
+  demo_auto_run?: boolean;
   cors_origins: string[];
   integrations: {
     clickhouse_enabled: boolean;
@@ -289,6 +291,57 @@ export interface RuntimeConfig {
     guild_ai_enabled: boolean;
     openui_enabled: boolean;
   };
+}
+
+export interface AgentMetricSummary {
+  agent_name: string;
+  total_runs: number;
+  completed_runs: number;
+  failed_runs: number;
+  success_rate: number;
+  average_runtime_ms: number;
+  actions_completed: number;
+  opportunities_found: number;
+  last_run_at?: string | null;
+}
+
+export interface AgentActivityResponse {
+  agents: AgentMetricSummary[];
+  total_runs: number;
+  overall_success_rate: number;
+  average_runtime_ms: number;
+  total_actions_completed: number;
+  opportunities_found: number;
+  recent_actions: AgentActionLog[];
+  guild_runs: Record<string, unknown>[];
+}
+
+export interface OpenUIComponent {
+  type: string;
+  id: string;
+  props: Record<string, unknown>;
+  children?: OpenUIComponent[];
+}
+
+export interface OpenUILayout {
+  title: string;
+  description: string;
+  components: OpenUIComponent[];
+}
+
+export interface DemoStepResult {
+  step: string;
+  agent_name: string;
+  status: string;
+  summary: string;
+  metadata: Metadata;
+}
+
+export interface DemoRunResult {
+  started_at: string;
+  completed_at: string;
+  steps: DemoStepResult[];
+  agent_actions: AgentActionLog[];
 }
 
 export interface IngestionRun {

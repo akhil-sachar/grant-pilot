@@ -9,10 +9,12 @@ from app.db.clickhouse_service import ClickHouseStorageError
 from app.db.repository import get_repository
 from app.routes import (
     agent_actions,
+    agent_activity,
     applications,
     composio,
     config,
     dashboard,
+    demo,
     documents,
     essay_versions,
     health,
@@ -20,12 +22,18 @@ from app.routes import (
     matches,
     matching,
     notifications,
+    openui,
     opportunities,
     outreach_emails,
     profile,
     recommendation_drafts,
     storage,
     sponsor,
+)
+from app.services.demo_orchestrator import run_demo_pipeline
+from app.workers.notification_scheduler import (
+    start_notification_scheduler,
+    stop_notification_scheduler,
 )
 from app.workers.scan_scheduler import start_scan_scheduler, stop_scan_scheduler
 
@@ -35,9 +43,14 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    get_repository().initialize()
+    repository = get_repository()
+    repository.initialize()
     start_scan_scheduler()
+    start_notification_scheduler()
+    if settings.demo_mode and settings.demo_auto_run:
+        await run_demo_pipeline(repository)
     yield
+    await stop_notification_scheduler()
     await stop_scan_scheduler()
 
 
@@ -71,6 +84,9 @@ app.include_router(outreach_emails.router, prefix=settings.api_prefix)
 app.include_router(composio.router, prefix=settings.api_prefix)
 app.include_router(notifications.router, prefix=settings.api_prefix)
 app.include_router(agent_actions.router, prefix=settings.api_prefix)
+app.include_router(agent_activity.router, prefix=settings.api_prefix)
+app.include_router(openui.router, prefix=settings.api_prefix)
+app.include_router(demo.router, prefix=settings.api_prefix)
 app.include_router(ingestion_runs.router, prefix=settings.api_prefix)
 app.include_router(sponsor.router, prefix=settings.api_prefix)
 app.include_router(storage.router, prefix=settings.api_prefix)

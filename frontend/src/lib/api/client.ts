@@ -1,13 +1,16 @@
 import { appConfig } from "@/lib/config";
 import type {
+  AgentActivityResponse,
   ApplicationBundle,
-  DocumentVersion,
   ComposioStatus,
   DashboardResponse,
+  DemoRunResult,
+  DocumentVersion,
   EssayImproveResult,
   GrantApplication,
   MatchResult,
   Notification,
+  OpenUILayout,
   Opportunity,
   OutreachGenerateResult,
   RecommendationGenerateResult,
@@ -18,13 +21,16 @@ import type {
 } from "@/lib/types";
 
 import {
+  mockAgentActivity,
   mockApplicationBundles,
   mockApplications,
   mockDashboard,
+  mockDemoRunResult,
   mockDocumentVersions,
   mockDocuments,
   mockMatches,
   mockNotifications,
+  mockOpenUILayout,
   mockOpportunities,
   mockProfile,
   mockRuntimeConfig,
@@ -60,6 +66,27 @@ export async function getDashboard(): Promise<DashboardResponse> {
     return mockDashboard;
   }
   return request<DashboardResponse>("/dashboard");
+}
+
+export async function getAgentActivity(): Promise<AgentActivityResponse> {
+  if (appConfig.demoMode) {
+    return mockAgentActivity;
+  }
+  return request<AgentActivityResponse>("/agent-activity");
+}
+
+export async function getOpenUILayout(): Promise<OpenUILayout> {
+  if (appConfig.demoMode) {
+    return mockOpenUILayout;
+  }
+  return request<OpenUILayout>("/openui/layout");
+}
+
+export async function runDemoPipeline(): Promise<DemoRunResult> {
+  if (appConfig.demoMode) {
+    return mockDemoRunResult;
+  }
+  return request<DemoRunResult>("/demo/run", { method: "POST" });
 }
 
 export async function getProfile(): Promise<UserProfile> {
@@ -469,11 +496,54 @@ export async function improveApplicationEssay(applicationId: string): Promise<Es
   });
 }
 
-export async function getNotifications(): Promise<Notification[]> {
+export async function getNotifications(query = ""): Promise<Notification[]> {
   if (appConfig.demoMode) {
-    return mockNotifications;
+    let items = [...mockNotifications];
+    const params = new URLSearchParams(query);
+    const type = params.get("type");
+    const priority = params.get("priority");
+    const isRead = params.get("is_read");
+    const sort = params.get("sort") ?? "created_desc";
+    if (type) items = items.filter((item) => item.notification_type === type);
+    if (priority) items = items.filter((item) => item.priority === priority);
+    if (isRead === "true") items = items.filter((item) => item.is_read);
+    if (isRead === "false") items = items.filter((item) => !item.is_read);
+    const rank: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
+    if (sort === "created_asc") {
+      return items.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    }
+    if (sort === "priority_desc") {
+      return items.sort(
+        (a, b) =>
+          (rank[b.priority] ?? 0) - (rank[a.priority] ?? 0) ||
+          b.created_at.localeCompare(a.created_at),
+      );
+    }
+    if (sort === "priority_asc") {
+      return items.sort(
+        (a, b) =>
+          (rank[a.priority] ?? 0) - (rank[b.priority] ?? 0) ||
+          a.created_at.localeCompare(b.created_at),
+      );
+    }
+    return items.sort((a, b) => b.created_at.localeCompare(a.created_at));
   }
-  return request<Notification[]>("/notifications");
+  const suffix = query ? `?${query}` : "";
+  return request<Notification[]>(`/notifications${suffix}`);
+}
+
+export async function runNotificationAgent(): Promise<{ created_count: number }> {
+  if (appConfig.demoMode) {
+    return { created_count: 0 };
+  }
+  return request<{ created_count: number }>("/notifications/run", { method: "POST" });
+}
+
+export async function markAllNotificationsRead(): Promise<Notification[]> {
+  if (appConfig.demoMode) {
+    return mockNotifications.map((item) => ({ ...item, is_read: true }));
+  }
+  return request<Notification[]>("/notifications/read-all", { method: "PATCH" });
 }
 
 export async function markNotificationRead(id: string): Promise<Notification> {

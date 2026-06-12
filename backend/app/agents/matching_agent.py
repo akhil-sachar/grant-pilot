@@ -4,6 +4,7 @@ from app.agents.base import AgentContext, AgentResult, BaseAgent
 from app.db.repository import GrantPilotRepository
 from app.db.seed_data import DEFAULT_USER_ID
 from app.models import AgentActionLog, AgentActionStatus, MatchResult, MatchStatus
+from app.services.agent_run_tracker import get_agent_run_tracker
 from app.services.matching_service import score_opportunity
 
 
@@ -24,17 +25,14 @@ class MatchingAgent(BaseAgent):
         return await self.match_all(context.user_id)
 
     async def match_all(self, user_id: str = DEFAULT_USER_ID) -> AgentResult:
-        action_id = f"agent_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
-        action_log = AgentActionLog(
-            id=action_id,
-            user_id=user_id,
-            agent_name=self.name,
-            action_type="full_match",
-            status=AgentActionStatus.STARTED,
-            input_summary="Scoring all opportunities against profile and documents",
+        tracker = get_agent_run_tracker(self.repository)
+        action_id = tracker.start(
+            user_id,
+            self.name,
+            "full_match",
+            "Scoring all opportunities against profile and documents",
             metadata={"scoring_method": self.scoring_method},
         )
-        self.repository.create_record(action_log)
 
         profile = self.repository.get_user_profile(user_id)
         documents = self.repository.list_documents(user_id)
@@ -77,14 +75,11 @@ class MatchingAgent(BaseAgent):
                 high_priority += 1
 
         summary = f"Scored {matched} opportunities ({high_priority} high priority)."
-        self.repository.update_record(
-            AgentActionLog,
+        tracker.finish(
             action_id,
-            {
-                "status": AgentActionStatus.COMPLETED,
-                "output_summary": summary,
-                "metadata": {"matched": matched, "high_priority": high_priority},
-            },
+            status=AgentActionStatus.COMPLETED,
+            output_summary=summary,
+            metadata={"matched": matched, "high_priority": high_priority},
         )
 
         return AgentResult(

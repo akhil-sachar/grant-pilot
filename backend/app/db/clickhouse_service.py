@@ -757,6 +757,10 @@ class ClickHouseService:
                 }
             )
             row["metadata_json"] = _json_dump(meta)
+        elif config.table_name == "notifications":
+            meta = dict(data.get("metadata") or {})
+            meta.update({"priority": data.get("priority", "medium")})
+            row["metadata_json"] = _json_dump(meta)
         else:
             row["metadata_json"] = _json_dump(data.get("metadata"))
 
@@ -807,6 +811,10 @@ class ClickHouseService:
             data["suggested_follow_up"] = meta.pop("suggested_follow_up", "")
             data["version_number"] = meta.pop("version_number", data.get("version_number", 1))
             data["source_email_id"] = meta.pop("source_email_id", data.get("source_email_id"))
+            data["metadata"] = meta
+        elif config.table_name == "notifications":
+            meta = _json_load(data.pop("metadata_json", None), {})
+            data["priority"] = meta.pop("priority", "medium")
             data["metadata"] = meta
         else:
             data["metadata"] = _json_load(data.pop("metadata_json", None), {})

@@ -1,28 +1,19 @@
 # GrantPilot
 
-GrantPilot is a hackathon foundation for an autonomous scholarship and grant application agent. This scaffold focuses on architecture, contracts, mock storage, and responsive product surfaces. Agent logic is intentionally not implemented yet.
+GrantPilot is an autonomous scholarship and grant application agent for hackathon demos. Six agents discover opportunities, match funding, improve essays, draft recommendations, generate outreach, and create notifications — with Guild AI observability, OpenUI dynamic layouts, and Composio integrations.
 
 ## Stack
 
-- Frontend: Next.js 15, React, TypeScript, Tailwind CSS
-- Backend: Python FastAPI
-- Infrastructure targets: ClickHouse, Airbyte, Composio, Guild AI, OpenUI, Render
-- Current storage mode: ClickHouse primary with local mock fallback
+- **Frontend:** Next.js 15, React, TypeScript, Tailwind CSS
+- **Backend:** Python FastAPI
+- **Storage:** ClickHouse (primary) with local JSON mock fallback
+- **Integrations:** Airbyte, Composio, Guild AI, OpenUI, Render
 
-## Project Layout
+## Quick start (demo mode)
 
-```txt
-grant-pilot/
-  frontend/          Next.js app router UI
-  backend/           FastAPI app, models, repositories, services, routes, integrations
-  infra/             ClickHouse schema and integration notes
-  docker-compose.yml Local ClickHouse service
-  render.yaml        Render deployment blueprint
-```
+Demo mode works without ClickHouse or external API keys. The frontend uses rich mock data; the backend runs real agents against local storage.
 
-## Local Setup
-
-1. Copy environment files:
+### 1. Environment
 
 ```bash
 cp .env.example .env
@@ -30,81 +21,158 @@ cp frontend/.env.example frontend/.env.local
 cp backend/.env.example backend/.env
 ```
 
-2. Install frontend dependencies:
+Ensure these are set (defaults in `.env.example`):
+
+```bash
+DEMO_MODE=true
+NEXT_PUBLIC_DEMO_MODE=true
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+### 2. Install dependencies
 
 ```bash
 npm --prefix frontend install
-```
-
-3. Install backend dependencies in your Python environment:
-
-```bash
 pip install -r backend/requirements.txt
 ```
 
-4. Run the services in separate terminals:
+### 3. Run (two terminals)
+
+**Terminal 1 — API**
+
+```bash
+uvicorn app.main:app --app-dir backend --reload --host 0.0.0.0 --port 8000
+```
+
+**Terminal 2 — Frontend**
 
 ```bash
 npm --prefix frontend run dev
-uvicorn app.main:app --app-dir backend --reload
 ```
 
-Frontend runs on `http://localhost:3000`. Backend runs on `http://localhost:8000`.
+Open **http://localhost:3000**
 
-## Storage And Demo Mode
+| Page | URL | What it shows |
+|------|-----|----------------|
+| Hackathon demo | `/demo` | One-click full agent pipeline |
+| Agent Activity | `/agents` | Guild AI metrics + OpenUI layout |
+| Dashboard | `/dashboard` | Ranked matches and pipeline |
+| Opportunities | `/opportunities` | SponsorAgent scan status |
+| Applications | `/applications` | Essay, recommendation, outreach editors |
+| Notifications | `/notifications` | Notification Center |
 
-GrantPilot now attempts to use ClickHouse as the primary storage layer when `CLICKHOUSE_ENABLED=true`. If ClickHouse is unavailable and `CLICKHOUSE_FALLBACK_ENABLED=true`, the API falls back to local mock JSON storage.
+### 4. Trigger agents manually (optional)
 
-- `NEXT_PUBLIC_DEMO_MODE=true` makes the frontend use local mock data.
-- `CLICKHOUSE_ENABLED=true` makes the backend initialize ClickHouse tables.
-- `CLICKHOUSE_FALLBACK_ENABLED=true` preserves local fallback storage.
-- `MOCK_STORAGE_PATH=backend/.data/mock_storage.json` controls the fallback path.
+With the API running:
 
-Start ClickHouse locally:
+```bash
+# Full demo pipeline (all agents in sequence)
+curl -X POST http://localhost:8000/api/v1/demo/run
+
+# Individual agents
+curl -X POST http://localhost:8000/api/v1/sponsor/scan
+curl -X POST http://localhost:8000/api/v1/matching/run
+curl -X POST http://localhost:8000/api/v1/notifications/run
+
+# Health check
+curl http://localhost:8000/health
+```
+
+API docs: **http://localhost:8000/docs**
+
+## Full local setup (with ClickHouse)
+
+1. Start ClickHouse:
 
 ```bash
 docker compose up -d clickhouse
 ```
 
-Initialize storage or load sample data:
+2. Set in `.env` / `backend/.env`:
+
+```bash
+CLICKHOUSE_ENABLED=true
+CLICKHOUSE_FALLBACK_ENABLED=true
+CLICKHOUSE_HOST=localhost
+```
+
+3. Initialize storage:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/storage/initialize
 curl -X POST http://localhost:8000/api/v1/storage/sample-data
 ```
 
-## API Surface
+4. Run frontend and backend as above.
 
-The backend exposes versioned routes under `/api/v1`:
+Background workers start automatically with the API:
+- **SponsorAgent** — periodic funding scans (`SPONSOR_SCAN_INTERVAL_SECONDS`, default 300)
+- **NotificationAgent** — periodic notification generation (`NOTIFICATION_SCAN_INTERVAL_SECONDS`, default 180)
 
-- `GET /api/v1/dashboard`
-- `GET /api/v1/dashboard/analytics`
-- `GET | PUT /api/v1/profile/me`
-- CRUD `/api/v1/documents`
-- CRUD `/api/v1/opportunities`
-- CRUD `/api/v1/matches`
-- CRUD `/api/v1/applications`
-- CRUD `/api/v1/essay-versions`
-- CRUD `/api/v1/recommendation-drafts`
-- CRUD `/api/v1/outreach-emails`
-- CRUD `/api/v1/notifications`
-- CRUD `/api/v1/agent-actions`
-- CRUD `/api/v1/ingestion-runs`
-- `GET /api/v1/storage/health`
-- `POST /api/v1/storage/initialize`
-- `POST /api/v1/storage/sample-data`
-- `GET /api/v1/applications/{application_id}`
+## Deploy on Render
 
-## Database Schemas
+The repo includes `render.yaml` for one-click Blueprint deploy:
 
-ClickHouse DDL lives in `infra/clickhouse/schema.sql`. The backend also creates tables automatically through `ClickHouseService` at startup.
+1. Push to GitHub and connect the repo in [Render](https://render.com).
+2. Use **New → Blueprint** and select `render.yaml`.
+3. Render creates:
+   - **grantpilot-api** — FastAPI (`/health` check)
+   - **grantpilot-web** — Next.js (`/` check)
+4. Env vars are wired in the blueprint (`DEMO_MODE`, `NEXT_PUBLIC_DEMO_MODE`, Guild AI, schedulers, CORS).
 
-## Not Implemented Yet
+After deploy, open the web service URL and go to `/demo` for the showcase.
 
-- AI agents and autonomous workflows
-- Document parsing and embedding
-- Real ClickHouse persistence
-- Airbyte sync jobs
-- Composio tool execution
-- Guild AI experiments
-- OpenUI prompt-to-interface workflows
+## Project layout
+
+```txt
+grant-pilot/
+  frontend/              Next.js app (pages, OpenUI renderer, demo UI)
+  backend/               FastAPI app, agents, services, workers
+  infra/                 ClickHouse schema, integration notes
+  docker-compose.yml     Local ClickHouse
+  render.yaml            Render deployment blueprint
+```
+
+## Agents
+
+| Agent | Trigger | Purpose |
+|-------|---------|---------|
+| SponsorAgent | `POST /api/v1/sponsor/scan` | Discover funding opportunities |
+| MatchingAgent | `POST /api/v1/matching/run` | Score opportunities vs profile |
+| EssayAgent | `POST /api/v1/applications/{id}/improve-essay` | Tailor essays per opportunity |
+| RecommendationAgent | `POST /api/v1/applications/{id}/generate-recommendation` | Draft recommender letters |
+| OutreachAgent | `POST /api/v1/applications/{id}/generate-outreach` | Personalized emails + Composio |
+| NotificationAgent | `POST /api/v1/notifications/run` | Actionable notifications |
+
+All runs are logged to `AgentActionLog` and tracked by **Guild AI** (`.guild/runs.jsonl`).
+
+## Key API routes
+
+- `GET /health` — liveness
+- `GET /api/v1/config` — runtime and integration flags
+- `GET /api/v1/dashboard` — metrics and ranked opportunities
+- `GET /api/v1/agent-activity` — runtime, success rate, Guild logs
+- `GET /api/v1/openui/layout` — dynamic UI component tree
+- `POST /api/v1/demo/run` — full demo pipeline (requires `DEMO_MODE=true`)
+- `GET /api/v1/composio/status` — Composio simulated vs live mode
+
+Full CRUD under `/api/v1` for documents, opportunities, matches, applications, notifications, and agent actions.
+
+## Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `DEMO_MODE` | Backend demo flag; enables `/demo/run` |
+| `NEXT_PUBLIC_DEMO_MODE` | Frontend uses mock API data when `true` |
+| `GUILD_AI_ENABLED` | Track agent runs in Guild AI |
+| `OPENUI_ENABLED` | Serve OpenUI layout specs |
+| `DEMO_AUTO_RUN` | Run demo pipeline on API startup |
+| `COMPOSIO_API_KEY` | Live Composio (simulated if unset) |
+| `SPONSOR_SCAN_ENABLED` | Background opportunity scans |
+| `NOTIFICATION_SCAN_ENABLED` | Background notification scans |
+
+See `.env.example` for the full list.
+
+## Database
+
+ClickHouse DDL: `infra/clickhouse/schema.sql`. Tables are also created at startup via `ClickHouseService`.

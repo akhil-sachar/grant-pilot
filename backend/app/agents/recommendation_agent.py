@@ -5,7 +5,8 @@ from pydantic import Field
 from app.agents.base import AgentContext, AgentResult, BaseAgent
 from app.db.repository import GrantPilotRepository
 from app.db.seed_data import DEFAULT_USER_ID
-from app.models import APIModel, AgentActionLog, AgentActionStatus, RecommendationDraft, RecommendationStatus
+from app.models import APIModel, AgentActionStatus, RecommendationDraft, RecommendationStatus
+from app.services.agent_run_tracker import get_agent_run_tracker
 from app.models.recommendation_draft import RecommenderType
 from app.services.application_service import build_application_bundle
 from app.services.recommendation_service import (
@@ -69,91 +70,94 @@ class RecommendationAgent(BaseAgent):
         user_id: str = DEFAULT_USER_ID,
     ) -> RecommendationGenerateResult:
         request = request or GenerateRecommendationRequest()
-        action_id = f"agent_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
-        action_log = AgentActionLog(
-            id=action_id,
-            user_id=user_id,
-            agent_name=self.name,
-            action_type="generate_recommendation",
-            status=AgentActionStatus.STARTED,
-            input_summary=f"Drafting recommendation for application {application_id}",
+        tracker = get_agent_run_tracker(self.repository)
+        action_id = tracker.start(
+            user_id,
+            self.name,
+            "generate_recommendation",
+            f"Drafting recommendation for application {application_id}",
             metadata={
                 "application_id": application_id,
                 "recommender_type": request.recommender_type.value,
                 "generation_method": self.generation_method,
             },
         )
-        self.repository.create_record(action_log)
 
-        bundle = build_application_bundle(self.repository, application_id)
-        profile = self.repository.get_user_profile(user_id)
-        documents = self.repository.list_documents(user_id)
-        existing_drafts = sorted(bundle.recommendation_drafts, key=lambda item: item.version_number)
+        try:
+            bundle = build_application_bundle(self.repository, application_id)
+            profile = self.repository.get_user_profile(user_id)
+            documents = self.repository.list_documents(user_id)
+            existing_drafts = sorted(bundle.recommendation_drafts, key=lambda item: item.version_number)
 
-        name, email, relationship = resolve_recommender(
-            request.recommender_type,
-            existing_drafts,
-            request.recommender_name,
-            request.recommender_email,
-        )
+            name, email, relationship = resolve_recommender(
+                request.recommender_type,
+                existing_drafts,
+                request.recommender_name,
+                request.recommender_email,
+            )
 
-        output = generate_recommendation_draft(
-            profile=profile,
-            opportunity=bundle.opportunity,
-            documents=documents,
-            recommender_type=request.recommender_type,
-            recommender_name=name,
-            relationship=relationship,
-            method=self.generation_method,
-        )
+            output = generate_recommendation_draft(
+                profile=profile,
+                opportunity=bundle.opportunity,
+                documents=documents,
+                recommender_type=request.recommender_type,
+                recommender_name=name,
+                relationship=relationship,
+                method=self.generation_method,
+            )
 
-        version_number = next_draft_version(existing_drafts)
-        source_draft = existing_drafts[-1] if existing_drafts else None
-        draft_id = (
-            f"rec_{application_id}_v{version_number}_"
-            f"{datetime.now(timezone.utc).strftime('%H%M%S')}"
-        )
+            version_number = next_draft_version(existing_drafts)
+            source_draft = existing_drafts[-1] if existing_drafts else None
+            draft_id = (
+                f"rec_{application_id}_v{version_number}_"
+                f"{datetime.now(timezone.utc).strftime('%H%M%S')}"
+            )
 
-        recommendation_draft = RecommendationDraft(
-            id=draft_id,
-            application_id=application_id,
-            recommender_name=name,
-            recommender_email=email,
-            relationship=relationship,
-            recommender_type=request.recommender_type,
-            draft_body=output.draft_body,
-            version_number=version_number,
-            source_draft_id=source_draft.id if source_draft else None,
-            key_talking_points=output.key_talking_points,
-            why_it_matches=output.why_it_matches,
-            status=RecommendationStatus.DRAFTED,
-            metadata={
-                "agent": self.name,
-                "generation_method": output.generation_method,
-                "opportunity_id": bundle.opportunity.id,
-                "draft_for_recommender_review": True,
-            },
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
-        )
-        self.repository.create_record(recommendation_draft)
+            recommendation_draft = RecommendationDraft(
+                id=draft_id,
+                application_id=application_id,
+                recommender_name=name,
+                recommender_email=email,
+                relationship=relationship,
+                recommender_type=request.recommender_type,
+                draft_body=output.draft_body,
+                version_number=version_number,
+                source_draft_id=source_draft.id if source_draft else None,
+                key_talking_points=output.key_talking_points,
+                why_it_matches=output.why_it_matches,
+                status=RecommendationStatus.DRAFTED,
+                metadata={
+                    "agent": self.name,
+                    "generation_method": output.generation_method,
+                    "opportunity_id": bundle.opportunity.id,
+                    "draft_for_recommender_review": True,
+                },
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            self.repository.create_record(recommendation_draft)
 
-        self.repository.update_record(
-            AgentActionLog,
-            action_id,
-            {
-                "status": AgentActionStatus.COMPLETED,
-                "output_summary": f"Created recommendation draft v{version_number} for {name}.",
-                "metadata": {
+            tracker.finish(
+                action_id,
+                status=AgentActionStatus.COMPLETED,
+                output_summary=f"Created recommendation draft v{version_number} for {name}.",
+                metadata={
                     "application_id": application_id,
                     "recommendation_draft_id": recommendation_draft.id,
                     "version_number": version_number,
                 },
-            },
-        )
+            )
 
-        return RecommendationGenerateResult(
-            recommendation_draft=recommendation_draft,
-            key_talking_points=output.key_talking_points,
-            why_it_matches=output.why_it_matches,
-        )
+            return RecommendationGenerateResult(
+                recommendation_draft=recommendation_draft,
+                key_talking_points=output.key_talking_points,
+                why_it_matches=output.why_it_matches,
+            )
+        except Exception as exc:
+            tracker.finish(
+                action_id,
+                status=AgentActionStatus.FAILED,
+                output_summary=str(exc),
+                metadata={"application_id": application_id},
+            )
+            raise

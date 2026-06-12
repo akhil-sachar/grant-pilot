@@ -1,11 +1,14 @@
 import type {
   AgentActionLog,
+  AgentActivityResponse,
   ApplicationBundle,
   DashboardResponse,
+  DemoRunResult,
   DocumentVersion,
   GrantApplication,
   MatchResult,
   Notification,
+  OpenUILayout,
   Opportunity,
   RuntimeConfig,
   SponsorScanStatus,
@@ -325,40 +328,192 @@ export const mockApplications: GrantApplication[] = [
 
 export const mockNotifications: Notification[] = [
   {
+    id: "not_high_match_civic",
+    user_id: "usr_demo_001",
+    title: "High match opportunity",
+    message: "Civic AI Builders Scholarship scored 92% — strong fit for your profile.",
+    notification_type: "high_match",
+    priority: "high",
+    is_read: false,
+    action_url: "/opportunities",
+    metadata: { dedupe_key: "high_match:opp_civic_ai", agent: "notification-agent" },
+    created_at: "2026-06-12T09:00:00Z",
+  },
+  {
     id: "not_deadline_open_grant",
     user_id: "usr_demo_001",
-    title: "Open Data Research Grant closes soon",
-    message: "Research proposal and budget are still pending.",
-    notification_type: "deadline",
+    title: "Deadline approaching",
+    message: "Open Data Research Grant is due soon — research proposal and budget are still pending.",
+    notification_type: "deadline_approaching",
+    priority: "medium",
     is_read: false,
-    action_url: "/applications",
-    metadata: {},
+    action_url: "/applications/app_open_grant",
+    metadata: { dedupe_key: "deadline_approaching:app_open_grant", agent: "notification-agent" },
     created_at: "2026-06-11T08:00:00Z",
   },
   {
     id: "not_transcript_review",
     user_id: "usr_demo_001",
-    title: "Transcript needs review",
+    title: "Missing document",
     message: "Confirm the parsed coursework before matching uses it.",
-    notification_type: "document",
+    notification_type: "missing_document",
+    priority: "high",
     is_read: false,
     action_url: "/documents",
-    metadata: {},
+    metadata: { dedupe_key: "missing_document:transcript", agent: "notification-agent" },
     created_at: "2026-06-10T18:00:00Z",
+  },
+  {
+    id: "not_essay_ready",
+    user_id: "usr_demo_001",
+    title: "Essay ready for review",
+    message: "Version 1 for Civic AI Builders Scholarship is ready to review.",
+    notification_type: "essay_ready",
+    priority: "medium",
+    is_read: false,
+    action_url: "/applications/app_civic_ai",
+    metadata: { dedupe_key: "essay_ready:essay_civic_ai_v1", agent: "notification-agent" },
+    created_at: "2026-06-11T11:00:00Z",
+  },
+  {
+    id: "not_rec_ready",
+    user_id: "usr_demo_001",
+    title: "Recommendation draft ready",
+    message: "A draft for Dr. Ana Patel on Open Data Research Grant is ready for recommender review.",
+    notification_type: "recommendation_ready",
+    priority: "medium",
+    is_read: false,
+    action_url: "/applications/app_open_grant",
+    metadata: { dedupe_key: "recommendation_ready:rec_open_grant_faculty", agent: "notification-agent" },
+    created_at: "2026-06-10T13:00:00Z",
+  },
+  {
+    id: "not_email_ready",
+    user_id: "usr_demo_001",
+    title: "Email draft ready",
+    message: "Outreach draft for Open Data Research Grant is ready to send.",
+    notification_type: "email_draft_ready",
+    priority: "low",
+    is_read: true,
+    action_url: "/applications/app_open_grant",
+    metadata: { dedupe_key: "email_draft_ready:email_open_grant_faculty", agent: "notification-agent" },
+    created_at: "2026-06-10T14:00:00Z",
   },
 ];
 
 export const mockAgentActions: AgentActionLog[] = [
   {
-    id: "log_seed_match",
+    id: "log_sponsor_scan",
+    user_id: "usr_demo_001",
+    agent_name: "sponsor-agent",
+    action_type: "full_scan",
+    status: "completed",
+    input_summary: "Scanning all configured funding sources",
+    output_summary: "Scanned 9 sources, loaded 18 opportunities.",
+    metadata: {
+      guild_run_id: "guild_demo_sponsor_001",
+      runtime_ms: 4200,
+      sources_scanned: 9,
+      total_loaded: 18,
+      tracked_by: "guild-ai",
+    },
+    created_at: "2026-06-12T08:00:00Z",
+  },
+  {
+    id: "log_matching_run",
     user_id: "usr_demo_001",
     agent_name: "matching-agent",
-    action_type: "seeded_match_preview",
-    status: "skipped",
-    input_summary: "Demo profile and seeded opportunities",
-    output_summary: "Static match records loaded for interface development",
-    metadata: { agent_logic_enabled: false },
-    created_at: "2026-06-09T15:00:00Z",
+    action_type: "full_match",
+    status: "completed",
+    input_summary: "Scoring all opportunities against profile and documents",
+    output_summary: "Scored 3 opportunities (2 high priority).",
+    metadata: {
+      guild_run_id: "guild_demo_match_001",
+      runtime_ms: 890,
+      matched: 3,
+      high_priority: 2,
+      tracked_by: "guild-ai",
+    },
+    created_at: "2026-06-12T08:01:30Z",
+  },
+  {
+    id: "log_essay_improve",
+    user_id: "usr_demo_001",
+    agent_name: "essay-agent",
+    action_type: "improve_essay",
+    status: "completed",
+    input_summary: "Tailoring essay for application app_civic_ai",
+    output_summary: "Tailored Civic AI Builders essay with stronger civic impact framing.",
+    metadata: {
+      guild_run_id: "guild_demo_essay_001",
+      runtime_ms: 1240,
+      application_id: "app_civic_ai",
+      tracked_by: "guild-ai",
+    },
+    created_at: "2026-06-12T08:03:00Z",
+  },
+  {
+    id: "log_rec_draft",
+    user_id: "usr_demo_001",
+    agent_name: "recommendation-agent",
+    action_type: "generate_recommendation",
+    status: "completed",
+    input_summary: "Drafting recommendation for application app_open_grant",
+    output_summary: "Created recommendation draft v1 for Dr. Ana Patel.",
+    metadata: {
+      guild_run_id: "guild_demo_rec_001",
+      runtime_ms: 980,
+      tracked_by: "guild-ai",
+    },
+    created_at: "2026-06-12T08:04:15Z",
+  },
+  {
+    id: "log_outreach",
+    user_id: "usr_demo_001",
+    agent_name: "outreach-agent",
+    action_type: "generate_outreach",
+    status: "completed",
+    input_summary: "Outreach for application app_open_grant",
+    output_summary: "Created outreach email v1 and ran 4 Composio actions.",
+    metadata: {
+      guild_run_id: "guild_demo_outreach_001",
+      runtime_ms: 1560,
+      actions: 4,
+      tracked_by: "guild-ai",
+    },
+    created_at: "2026-06-12T08:05:30Z",
+  },
+  {
+    id: "log_notifications",
+    user_id: "usr_demo_001",
+    agent_name: "notification-agent",
+    action_type: "generate_notifications",
+    status: "completed",
+    input_summary: "Scanning workspace for notification events",
+    output_summary: "Created 6 notifications.",
+    metadata: {
+      guild_run_id: "guild_demo_notif_001",
+      runtime_ms: 320,
+      created_count: 6,
+      tracked_by: "guild-ai",
+    },
+    created_at: "2026-06-12T08:06:00Z",
+  },
+  {
+    id: "log_composio",
+    user_id: "usr_demo_001",
+    agent_name: "composio-service",
+    action_type: "outreach_workflow",
+    status: "completed",
+    input_summary: "Gmail draft, Google Doc, Calendar follow-up, Drive archive",
+    output_summary: "Simulated Composio workflow completed.",
+    metadata: {
+      guild_run_id: "guild_demo_composio_001",
+      runtime_ms: 640,
+      actions: 4,
+      tracked_by: "guild-ai",
+    },
+    created_at: "2026-06-12T08:05:45Z",
   },
 ];
 
@@ -414,14 +569,15 @@ export const mockRuntimeConfig: RuntimeConfig = {
   app_env: "development",
   api_prefix: "/api/v1",
   demo_mode: true,
+  demo_auto_run: false,
   cors_origins: ["http://localhost:3000"],
   integrations: {
     clickhouse_enabled: false,
     airbyte_enabled: false,
     composio_enabled: false,
     composio_mode: "simulated",
-    guild_ai_enabled: false,
-    openui_enabled: false,
+    guild_ai_enabled: true,
+    openui_enabled: true,
   },
 };
 
@@ -587,4 +743,213 @@ export const mockSponsorScanStatus: SponsorScanStatus = {
       completed_at: "2026-06-12T08:00:05Z",
     },
   ],
+};
+
+const trackedAgents = [
+  "sponsor-agent",
+  "matching-agent",
+  "essay-agent",
+  "recommendation-agent",
+  "outreach-agent",
+  "notification-agent",
+] as const;
+
+export const mockAgentActivity: AgentActivityResponse = {
+  agents: trackedAgents.map((agentName) => {
+    const logs = mockAgentActions.filter((log) => log.agent_name === agentName);
+    const completed = logs.filter((log) => log.status === "completed");
+    const runtimes = logs
+      .map((log) => log.metadata.runtime_ms)
+      .filter((value): value is number => typeof value === "number");
+    const actions = completed.reduce((total, log) => {
+      const value =
+        log.metadata.matched ??
+        log.metadata.created_count ??
+        log.metadata.actions ??
+        log.metadata.total_loaded ??
+        1;
+      return total + (typeof value === "number" ? value : 1);
+    }, 0);
+
+    return {
+      agent_name: agentName,
+      total_runs: logs.length,
+      completed_runs: completed.length,
+      failed_runs: logs.filter((log) => log.status === "failed").length,
+      success_rate: logs.length ? completed.length / logs.length : 0,
+      average_runtime_ms: runtimes.length
+        ? runtimes.reduce((a, b) => a + b, 0) / runtimes.length
+        : 0,
+      actions_completed: actions,
+      opportunities_found:
+        agentName === "sponsor-agent"
+          ? Number(completed[0]?.metadata.total_loaded ?? 0)
+          : 0,
+      last_run_at: logs[0]?.created_at ?? null,
+    };
+  }),
+  total_runs: mockAgentActions.length,
+  overall_success_rate: mockAgentActions.filter((log) => log.status === "completed").length / mockAgentActions.length,
+  average_runtime_ms:
+    mockAgentActions.reduce((total, log) => total + Number(log.metadata.runtime_ms ?? 0), 0) /
+    mockAgentActions.length,
+  total_actions_completed: 38,
+  opportunities_found: mockOpportunities.length,
+  recent_actions: mockAgentActions,
+  guild_runs: mockAgentActions.map((log) => ({
+    run_id: log.metadata.guild_run_id,
+    agent_name: log.agent_name,
+    status: log.status,
+    runtime_ms: log.metadata.runtime_ms,
+  })),
+};
+
+export const mockOpenUILayout: OpenUILayout = {
+  title: "GrantPilot Agent Workspace",
+  description: "Dynamic OpenUI layout generated from live agent activity and workspace state.",
+  components: [
+    {
+      type: "section",
+      id: "section_opportunities",
+      props: { title: "Opportunity Cards", layout: "grid" },
+      children: mockDashboard.ranked_opportunities!.slice(0, 3).map((item) => ({
+        type: "opportunity_card",
+        id: `opp_card_${item.match.id}`,
+        props: {
+          title: item.opportunity.title,
+          provider: item.opportunity.provider_name,
+          score_percent: item.score_percent,
+          success_probability: item.success_probability,
+          priority: item.priority,
+          deadline: item.opportunity.deadline,
+          tags: item.opportunity.tags,
+        },
+      })),
+    },
+    {
+      type: "section",
+      id: "section_matches",
+      props: { title: "Match Panels", layout: "stack" },
+      children: mockMatches.slice(0, 2).map((match) => ({
+        type: "match_panel",
+        id: `match_panel_${match.id}`,
+        props: {
+          score: match.score,
+          priority: match.priority,
+          fit_explanation: match.fit_explanation,
+          recommended_actions: match.recommended_actions,
+          missing_materials: match.missing_materials,
+        },
+      })),
+    },
+    {
+      type: "section",
+      id: "section_pipeline",
+      props: { title: "Application Pipeline", layout: "table" },
+      children: mockApplications.map((app) => ({
+        type: "pipeline_row",
+        id: `pipeline_${app.id}`,
+        props: {
+          application_id: app.id,
+          status: app.status,
+          due_at: app.due_at,
+          checklist_total: app.checklist.length,
+          checklist_done: app.checklist.filter((item) => item.status === "done").length,
+        },
+      })),
+    },
+    {
+      type: "section",
+      id: "section_notifications",
+      props: { title: "Notification Feed", layout: "feed" },
+      children: mockNotifications.slice(0, 4).map((item) => ({
+        type: "notification_item",
+        id: `notif_${item.id}`,
+        props: {
+          title: item.title,
+          message: item.message,
+          type: item.notification_type,
+          priority: item.priority,
+          is_read: item.is_read,
+          action_url: item.action_url,
+        },
+      })),
+    },
+    {
+      type: "section",
+      id: "section_timeline",
+      props: { title: "Agent Timeline", layout: "timeline" },
+      children: mockAgentActions.map((log) => ({
+        type: "timeline_event",
+        id: `timeline_${log.id}`,
+        props: {
+          agent_name: log.agent_name,
+          action_type: log.action_type,
+          status: log.status,
+          input_summary: log.input_summary,
+          output_summary: log.output_summary,
+          runtime_ms: log.metadata.runtime_ms,
+          guild_run_id: log.metadata.guild_run_id,
+          created_at: log.created_at,
+        },
+      })),
+    },
+  ],
+};
+
+export const mockDemoRunResult: DemoRunResult = {
+  started_at: "2026-06-12T08:00:00Z",
+  completed_at: "2026-06-12T08:06:30Z",
+  steps: [
+    {
+      step: "opportunity_discovery",
+      agent_name: "sponsor-agent",
+      status: "completed",
+      summary: "Scanned 9 sources, loaded 18 opportunities.",
+      metadata: { total_loaded: 18 },
+    },
+    {
+      step: "matching",
+      agent_name: "matching-agent",
+      status: "completed",
+      summary: "Scored 3 opportunities (2 high priority).",
+      metadata: { matched: 3 },
+    },
+    {
+      step: "essay_improvement",
+      agent_name: "essay-agent",
+      status: "completed",
+      summary: "Tailored Civic AI Builders essay.",
+      metadata: {},
+    },
+    {
+      step: "recommendation_generation",
+      agent_name: "recommendation-agent",
+      status: "completed",
+      summary: "Created recommendation draft for Dr. Ana Patel.",
+      metadata: {},
+    },
+    {
+      step: "personalized_outreach",
+      agent_name: "outreach-agent",
+      status: "completed",
+      summary: "Generated personalized faculty outreach email.",
+      metadata: {},
+    },
+    {
+      step: "notification_creation",
+      agent_name: "notification-agent",
+      status: "completed",
+      summary: "Created 6 notifications.",
+      metadata: { created_count: 6 },
+    },
+    {
+      step: "composio_actions",
+      agent_name: "composio-service",
+      status: "completed",
+      summary: "Simulated Composio workflow completed.",
+      metadata: { actions: 4 },
+    },
+  ],
+  agent_actions: mockAgentActions,
 };
