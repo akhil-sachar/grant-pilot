@@ -2,12 +2,14 @@ import { appConfig } from "@/lib/config";
 import type {
   ApplicationBundle,
   DocumentVersion,
+  ComposioStatus,
   DashboardResponse,
   EssayImproveResult,
   GrantApplication,
   MatchResult,
   Notification,
   Opportunity,
+  OutreachGenerateResult,
   RecommendationGenerateResult,
   RuntimeConfig,
   SponsorScanStatus,
@@ -239,6 +241,99 @@ export async function getApplicationBundle(id: string): Promise<ApplicationBundl
     return bundle;
   }
   return request<ApplicationBundle>(`/applications/${id}`);
+}
+
+export async function getComposioStatus(): Promise<ComposioStatus> {
+  if (appConfig.demoMode) {
+    return {
+      mode: "simulated",
+      api_key_configured: false,
+      connected_tools: ["gmail", "google_docs", "google_calendar", "google_drive"],
+      message: "Composio simulated mode active. Actions are logged without external side effects.",
+    };
+  }
+  return request<ComposioStatus>("/composio/status");
+}
+
+export async function generateApplicationOutreach(
+  applicationId: string,
+  payload: { recipient_role?: string; email_type?: string } = {},
+): Promise<OutreachGenerateResult> {
+  if (appConfig.demoMode) {
+    const bundle = mockApplicationBundles[applicationId];
+    if (!bundle) {
+      throw new Error(`Unknown mock application: ${applicationId}`);
+    }
+    const recipientRole = payload.recipient_role ?? "professor";
+    const emailType = payload.email_type ?? "recommendation_request";
+    const nextVersion = bundle.outreach_emails.length + 1;
+    const subject = `${emailType.replace(/_/g, " ")} — ${bundle.opportunity.title}`;
+    const body = `Dear ${recipientRole.replace(/_/g, " ")},\n\nI am writing regarding ${bundle.opportunity.title} from ${bundle.opportunity.provider_name}.\n\n${mockProfile.full_name}\n${mockProfile.email}`;
+    const result: OutreachGenerateResult = {
+      suggested_follow_up: "Follow up in 5–7 days if you have not received a response.",
+      composio_mode: "simulated",
+      composio_actions: [
+        {
+          action: "draft_email",
+          provider: "gmail",
+          status: "simulated",
+          mode: "simulated",
+          detail: `Simulated Gmail draft for ${bundle.opportunity.title}`,
+          metadata: {},
+        },
+        {
+          action: "create_google_doc",
+          provider: "google_docs",
+          status: "simulated",
+          mode: "simulated",
+          detail: `Simulated Google Doc: ${bundle.opportunity.title} — Outreach Draft`,
+          metadata: {},
+        },
+        {
+          action: "create_calendar_reminder",
+          provider: "google_calendar",
+          status: "simulated",
+          mode: "simulated",
+          detail: "Simulated calendar reminder for follow-up",
+          metadata: {},
+        },
+        {
+          action: "save_document",
+          provider: "google_drive",
+          status: "simulated",
+          mode: "simulated",
+          detail: "Simulated Drive upload of outreach draft",
+          metadata: {},
+        },
+      ],
+      outreach_email: {
+        id: `email_${applicationId}_v${nextVersion}_demo`,
+        application_id: applicationId,
+        recipient_email: "apatel@example.edu",
+        recipient_role: recipientRole,
+        email_type: emailType,
+        subject,
+        body,
+        suggested_follow_up: "Follow up in 5–7 days if you have not received a response.",
+        version_number: nextVersion,
+        source_email_id: bundle.outreach_emails.at(-1)?.id ?? null,
+        status: "draft",
+        sent_at: null,
+        metadata: { agent: "outreach-agent", composio_mode: "simulated" },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    };
+    mockApplicationBundles[applicationId] = {
+      ...bundle,
+      outreach_emails: [...bundle.outreach_emails, result.outreach_email],
+    };
+    return result;
+  }
+  return request<OutreachGenerateResult>(`/applications/${applicationId}/generate-outreach`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function generateApplicationRecommendation(

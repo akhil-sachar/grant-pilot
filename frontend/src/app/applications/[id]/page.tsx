@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { EssayEditor } from "@/components/essay-editor";
+import { OutreachEditor } from "@/components/outreach-editor";
 import { RecommendationEditor } from "@/components/recommendation-editor";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
@@ -64,6 +65,7 @@ export default async function ApplicationDetailPage({
 
       <EssayEditor initialBundle={bundle} />
       <RecommendationEditor initialBundle={bundle} />
+      <OutreachEditor initialBundle={bundle} />
     </AppShell>
   );
 }

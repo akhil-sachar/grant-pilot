@@ -179,13 +179,41 @@ export interface OutreachEmail {
   id: string;
   application_id: string;
   recipient_email: string;
+  recipient_role: string;
+  email_type: string;
   subject: string;
   body: string;
+  suggested_follow_up: string;
+  version_number: number;
+  source_email_id?: string | null;
   status: string;
   sent_at?: string | null;
   metadata: Metadata;
   created_at: string;
   updated_at: string;
+}
+
+export interface ComposioActionResult {
+  action: string;
+  provider: string;
+  status: string;
+  mode: string;
+  detail: string;
+  metadata: Metadata;
+}
+
+export interface ComposioStatus {
+  mode: string;
+  api_key_configured: boolean;
+  connected_tools: string[];
+  message: string;
+}
+
+export interface OutreachGenerateResult {
+  outreach_email: OutreachEmail;
+  suggested_follow_up: string;
+  composio_mode: string;
+  composio_actions: ComposioActionResult[];
 }
 
 export interface Notification {
@@ -257,6 +285,7 @@ export interface RuntimeConfig {
     clickhouse_enabled: boolean;
     airbyte_enabled: boolean;
     composio_enabled: boolean;
+    composio_mode: string;
     guild_ai_enabled: boolean;
     openui_enabled: boolean;
   };
