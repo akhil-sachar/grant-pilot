@@ -1,0 +1,12 @@
+models:
+  match-ranking:
+    description: Future experiment entry point for opportunity matching.
+    operations:
+      train:
+        main: python -m experiments.match_ranking
+        flags:
+          dataset:
+            default: data/matches.jsonl
+          model:
+            default: baseline
+

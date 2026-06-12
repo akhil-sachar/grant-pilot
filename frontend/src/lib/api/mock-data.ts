@@ -1,0 +1,357 @@
+import type {
+  AgentActionLog,
+  ApplicationBundle,
+  DashboardResponse,
+  GrantApplication,
+  MatchResult,
+  Notification,
+  Opportunity,
+  RuntimeConfig,
+  UploadedDocument,
+  UserProfile,
+} from "@/lib/types";
+
+export const mockProfile: UserProfile = {
+  id: "usr_demo_001",
+  email: "maya.chen@example.com",
+  full_name: "Maya Chen",
+  phone: "+1 415 555 0198",
+  location: "Oakland, CA",
+  date_of_birth: "2005-07-19",
+  education_level: "Undergraduate sophomore",
+  school_name: "Bay City College",
+  graduation_year: 2028,
+  fields_of_study: ["Computer Science", "Public Policy"],
+  career_goals: ["Civic technology", "AI safety", "Public-interest software"],
+  citizenship_status: "US citizen",
+  funding_goals: ["Tuition", "Research stipend", "Conference travel"],
+  demographic_info: { first_generation: true, low_income: true },
+  preferences: {
+    deadline_window_days: 45,
+    minimum_award_amount: 1000,
+    remote_friendly: true,
+  },
+  created_at: "2026-05-01T09:00:00Z",
+  updated_at: "2026-06-10T16:30:00Z",
+};
+
+export const mockOpportunities: Opportunity[] = [
+  {
+    id: "opp_civic_ai",
+    provider_name: "Civic Futures Foundation",
+    title: "Civic AI Builders Scholarship",
+    description: "Funding for students building applied technology for public benefit.",
+    opportunity_type: "scholarship",
+    amount_min: 2500,
+    amount_max: 10000,
+    currency: "USD",
+    deadline: "2026-08-15",
+    eligibility_summary:
+      "Open to undergraduate students with demonstrated civic technology work.",
+    requirements: ["Resume", "Transcript", "Personal statement", "Project portfolio"],
+    source_url: "https://example.org/civic-ai-builders",
+    status: "active",
+    tags: ["ai", "public-interest", "undergraduate"],
+    metadata: { source: "demo_seed" },
+    created_at: "2026-05-12T12:00:00Z",
+    updated_at: "2026-06-01T12:00:00Z",
+  },
+  {
+    id: "opp_open_grant",
+    provider_name: "Open Knowledge Trust",
+    title: "Open Data Research Grant",
+    description:
+      "Small grants for students using open datasets to answer community questions.",
+    opportunity_type: "grant",
+    amount_min: 1000,
+    amount_max: 5000,
+    currency: "USD",
+    deadline: "2026-07-30",
+    eligibility_summary:
+      "Applicants must submit a research plan and public data source list.",
+    requirements: ["Research proposal", "Budget", "Faculty reference"],
+    source_url: "https://example.org/open-data-research",
+    status: "active",
+    tags: ["open-data", "research", "community"],
+    metadata: { source: "demo_seed" },
+    created_at: "2026-05-18T10:15:00Z",
+    updated_at: "2026-06-03T11:20:00Z",
+  },
+  {
+    id: "opp_first_gen",
+    provider_name: "Horizon Scholars Network",
+    title: "First Generation STEM Award",
+    description: "Scholarship for first-generation students pursuing STEM degrees.",
+    opportunity_type: "award",
+    amount_min: 1500,
+    amount_max: 7500,
+    currency: "USD",
+    deadline: "2026-09-05",
+    eligibility_summary:
+      "First-generation undergraduate students in accredited STEM programs.",
+    requirements: ["Transcript", "Short essay", "Financial need statement"],
+    source_url: "https://example.org/first-gen-stem",
+    status: "active",
+    tags: ["stem", "first-generation", "need-based"],
+    metadata: { source: "demo_seed" },
+    created_at: "2026-05-24T08:45:00Z",
+    updated_at: "2026-06-05T09:00:00Z",
+  },
+];
+
+export const mockDocuments: UploadedDocument[] = [
+  {
+    id: "doc_resume",
+    user_id: "usr_demo_001",
+    file_name: "Maya_Chen_Resume.pdf",
+    document_type: "resume",
+    storage_uri: "mock://documents/doc_resume/Maya_Chen_Resume.pdf",
+    mime_type: "application/pdf",
+    size_bytes: 242112,
+    extracted_text_preview:
+      "Computer science student focused on civic AI prototypes and open data tools.",
+    tags: ["profile", "ready"],
+    metadata: { pages: 2 },
+    status: "processed",
+    uploaded_at: "2026-06-04T14:00:00Z",
+  },
+  {
+    id: "doc_transcript",
+    user_id: "usr_demo_001",
+    file_name: "Unofficial_Transcript.pdf",
+    document_type: "transcript",
+    storage_uri: "mock://documents/doc_transcript/Unofficial_Transcript.pdf",
+    mime_type: "application/pdf",
+    size_bytes: 518002,
+    extracted_text_preview:
+      "GPA 3.82, coursework includes data structures, policy analysis, statistics.",
+    tags: ["academic", "needs-review"],
+    metadata: { pages: 4 },
+    status: "needs_review",
+    uploaded_at: "2026-06-06T17:35:00Z",
+  },
+];
+
+export const mockMatches: MatchResult[] = [
+  {
+    id: "match_civic_ai",
+    user_id: "usr_demo_001",
+    opportunity_id: "opp_civic_ai",
+    score: 0.92,
+    rationale:
+      "Strong alignment with civic technology, public-interest software, and AI safety goals.",
+    strengths: ["Civic tech portfolio", "Relevant coursework", "Clear public-benefit theme"],
+    gaps: ["Portfolio link needs a stronger project outcome summary"],
+    recommended_actions: ["Refresh resume impact bullets", "Draft 650-word personal statement"],
+    status: "in_application",
+    metadata: {},
+    created_at: "2026-06-09T15:00:00Z",
+  },
+  {
+    id: "match_open_grant",
+    user_id: "usr_demo_001",
+    opportunity_id: "opp_open_grant",
+    score: 0.84,
+    rationale: "Research interests and open data experience fit the grant goals.",
+    strengths: ["Open data project idea", "Public policy minor"],
+    gaps: ["Needs faculty reference confirmed", "Budget not started"],
+    recommended_actions: ["Ask faculty mentor", "Create one-page research budget"],
+    status: "saved",
+    metadata: {},
+    created_at: "2026-06-10T10:10:00Z",
+  },
+  {
+    id: "match_first_gen",
+    user_id: "usr_demo_001",
+    opportunity_id: "opp_first_gen",
+    score: 0.78,
+    rationale:
+      "Eligibility is strong, but application materials need tailoring for STEM award criteria.",
+    strengths: ["First-generation eligibility", "STEM program"],
+    gaps: ["Financial need statement missing"],
+    recommended_actions: ["Upload financial aid summary", "Draft short essay"],
+    status: "new",
+    metadata: {},
+    created_at: "2026-06-11T09:25:00Z",
+  },
+];
+
+export const mockApplications: GrantApplication[] = [
+  {
+    id: "app_civic_ai",
+    user_id: "usr_demo_001",
+    opportunity_id: "opp_civic_ai",
+    match_result_id: "match_civic_ai",
+    status: "in_progress",
+    due_at: "2026-08-15T23:59:00Z",
+    submitted_at: null,
+    checklist: [
+      { id: "task_resume", label: "Resume", status: "done" },
+      { id: "task_statement", label: "Personal statement", status: "in_progress" },
+      { id: "task_portfolio", label: "Project portfolio", status: "todo" },
+    ],
+    notes: "Prioritize public-benefit outcomes and prototype screenshots.",
+    metadata: {},
+    created_at: "2026-06-09T16:00:00Z",
+    updated_at: "2026-06-11T12:00:00Z",
+  },
+  {
+    id: "app_open_grant",
+    user_id: "usr_demo_001",
+    opportunity_id: "opp_open_grant",
+    match_result_id: "match_open_grant",
+    status: "planned",
+    due_at: "2026-07-30T23:59:00Z",
+    submitted_at: null,
+    checklist: [
+      { id: "task_proposal", label: "Research proposal", status: "todo" },
+      { id: "task_budget", label: "Budget", status: "todo" },
+      { id: "task_reference", label: "Faculty reference", status: "blocked" },
+    ],
+    notes: null,
+    metadata: {},
+    created_at: "2026-06-10T11:00:00Z",
+    updated_at: "2026-06-10T11:00:00Z",
+  },
+];
+
+export const mockNotifications: Notification[] = [
+  {
+    id: "not_deadline_open_grant",
+    user_id: "usr_demo_001",
+    title: "Open Data Research Grant closes soon",
+    message: "Research proposal and budget are still pending.",
+    notification_type: "deadline",
+    is_read: false,
+    action_url: "/applications",
+    metadata: {},
+    created_at: "2026-06-11T08:00:00Z",
+  },
+  {
+    id: "not_transcript_review",
+    user_id: "usr_demo_001",
+    title: "Transcript needs review",
+    message: "Confirm the parsed coursework before matching uses it.",
+    notification_type: "document",
+    is_read: false,
+    action_url: "/documents",
+    metadata: {},
+    created_at: "2026-06-10T18:00:00Z",
+  },
+];
+
+export const mockAgentActions: AgentActionLog[] = [
+  {
+    id: "log_seed_match",
+    user_id: "usr_demo_001",
+    agent_name: "matching-agent",
+    action_type: "seeded_match_preview",
+    status: "skipped",
+    input_summary: "Demo profile and seeded opportunities",
+    output_summary: "Static match records loaded for interface development",
+    metadata: { agent_logic_enabled: false },
+    created_at: "2026-06-09T15:00:00Z",
+  },
+];
+
+export const mockDashboard: DashboardResponse = {
+  profile: mockProfile,
+  metrics: {
+    active_matches: mockMatches.length,
+    applications_in_progress: mockApplications.length,
+    documents_uploaded: mockDocuments.length,
+    unread_notifications: mockNotifications.filter((item) => !item.is_read).length,
+    next_deadline: "2026-07-30T23:59:00Z",
+    opportunities_found: mockOpportunities.length,
+    active_applications: mockApplications.length,
+    upcoming_deadlines: mockApplications.filter((item) => item.due_at).length,
+    average_match_score:
+      mockMatches.reduce((total, match) => total + match.score, 0) / mockMatches.length,
+    agent_actions: mockAgentActions.length,
+  },
+  top_matches: mockMatches,
+  opportunities: mockOpportunities,
+  applications: mockApplications,
+  documents: mockDocuments,
+  notifications: mockNotifications,
+  recent_agent_actions: mockAgentActions,
+  storage: {
+    storage_mode: "local",
+    primary: "clickhouse",
+    primary_available: false,
+    fallback_enabled: true,
+    last_error: "ClickHouse is unavailable",
+  },
+};
+
+export const mockRuntimeConfig: RuntimeConfig = {
+  app_name: "GrantPilot API",
+  app_env: "development",
+  api_prefix: "/api/v1",
+  demo_mode: true,
+  cors_origins: ["http://localhost:3000"],
+  integrations: {
+    clickhouse_enabled: false,
+    airbyte_enabled: false,
+    composio_enabled: false,
+    guild_ai_enabled: false,
+    openui_enabled: false,
+  },
+};
+
+export const mockApplicationBundles: Record<string, ApplicationBundle> = {
+  app_civic_ai: {
+    application: mockApplications[0],
+    opportunity: mockOpportunities[0],
+    essay_versions: [
+      {
+        id: "essay_civic_ai_v1",
+        application_id: "app_civic_ai",
+        prompt: "Describe how your work uses technology to improve public outcomes.",
+        content:
+          "Draft outline: community problem, prototype, measurable outcome, future plan.",
+        version_number: 1,
+        status: "outline",
+        feedback_notes: ["Add a concrete beneficiary story", "Quantify prototype usage"],
+        metadata: {},
+        created_at: "2026-06-11T10:00:00Z",
+      },
+    ],
+    recommendation_drafts: [],
+    outreach_emails: [],
+  },
+  app_open_grant: {
+    application: mockApplications[1],
+    opportunity: mockOpportunities[1],
+    essay_versions: [],
+    recommendation_drafts: [
+      {
+        id: "rec_open_grant_faculty",
+        application_id: "app_open_grant",
+        recommender_name: "Dr. Ana Patel",
+        recommender_email: "apatel@example.edu",
+        relationship: "Faculty research mentor",
+        draft_body: "Short request draft for a research-focused recommendation.",
+        status: "drafted",
+        metadata: {},
+        created_at: "2026-06-10T12:30:00Z",
+        updated_at: "2026-06-10T12:30:00Z",
+      },
+    ],
+    outreach_emails: [
+      {
+        id: "email_open_grant_faculty",
+        application_id: "app_open_grant",
+        recipient_email: "apatel@example.edu",
+        subject: "Recommendation request for Open Data Research Grant",
+        body:
+          "Draft email asking for a faculty reference and offering a short project summary.",
+        status: "draft",
+        sent_at: null,
+        metadata: {},
+        created_at: "2026-06-10T12:40:00Z",
+        updated_at: "2026-06-10T12:40:00Z",
+      },
+    ],
+  },
+};

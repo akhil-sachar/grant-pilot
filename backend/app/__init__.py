@@ -1,0 +1,2 @@
+"""GrantPilot FastAPI application package."""
+

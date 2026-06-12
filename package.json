@@ -1,0 +1,19 @@
+{
+  "name": "grant-pilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GrantPilot hackathon foundation for autonomous scholarship and grant applications.",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "uvicorn app.main:app --app-dir backend --reload",
+    "build": "npm --prefix frontend run build",
+    "typecheck": "npm --prefix frontend run typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
+
