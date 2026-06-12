@@ -12,7 +12,7 @@ _DEFAULT_RECIPIENTS: dict[RecipientRole, tuple[str, str]] = {
 
 
 def get_outreach_generator(method: str = "deterministic") -> OutreachGenerator:
-    if method == "ai":
+    if method in {"ai", "openai"}:
         return AIOutreachGenerator()
     return DeterministicOutreachGenerator()
 

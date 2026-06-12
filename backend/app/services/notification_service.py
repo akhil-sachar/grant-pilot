@@ -13,6 +13,8 @@ from app.models import (
     Opportunity,
     RecommendationStatus,
 )
+from app.services.llm.openai_service import get_openai_service
+from app.services.notification_ai import enhance_notification_copy
 
 
 def _dedupe_key(notification_type: NotificationType, entity_id: str) -> str:
@@ -250,15 +252,26 @@ def _notification(
     metadata: dict,
     now: datetime,
 ) -> Notification:
+    enhanced_title, enhanced_message = enhance_notification_copy(
+        title=title,
+        message=message,
+        notification_type=notification_type.value,
+        context=metadata,
+    )
     suffix = dedupe_key.replace(":", "_")
     return Notification(
         id=f"not_{suffix}_{now.strftime('%H%M%S%f')}",
         user_id=user_id,
-        title=title,
-        message=message,
+        title=enhanced_title,
+        message=enhanced_message,
         notification_type=notification_type,
         priority=priority,
         action_url=action_url,
-        metadata={"dedupe_key": dedupe_key, "agent": "notification-agent", **metadata},
+        metadata={
+            "dedupe_key": dedupe_key,
+            "agent": "notification-agent",
+            "generation_method": "openai" if get_openai_service().enabled else "deterministic",
+            **metadata,
+        },
         created_at=now,
     )

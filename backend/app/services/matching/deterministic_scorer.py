@@ -4,6 +4,7 @@ import re
 from datetime import date, datetime, timezone
 
 from app.models import DocumentProcessingStatus, DocumentType, MatchPriority, Opportunity
+from app.services.llm.context import document_summary, opportunity_summary, profile_summary
 from app.services.matching.scoring_base import MatchScoreInput, MatchScoreOutput, MatchScorer
 
 _REQUIREMENT_KEYWORDS: dict[str, tuple[str, ...]] = {
@@ -339,7 +340,54 @@ class DeterministicMatchScorer(MatchScorer):
 
 
 class AIMatchScorer(MatchScorer):
-    """Placeholder for future LLM-based scoring."""
+    """OpenAI-powered opportunity matching with Langfuse tracing."""
 
     def score(self, match_input: MatchScoreInput) -> MatchScoreOutput:
-        raise NotImplementedError("AI match scoring is not enabled yet.")
+        from app.services.llm.openai_service import get_openai_service
+
+        llm = get_openai_service()
+        fallback = DeterministicMatchScorer()
+        try:
+            data = llm.chat_json(
+                agent_name="matching-agent",
+                action="score_opportunity",
+                system_prompt=(
+                    "You score scholarship/grant fit for a student. "
+                    "Return JSON with: score_percent (0-100 int), priority (low|medium|high), "
+                    "rationale (string), fit_explanation (string), strengths (string[]), gaps (string[]), "
+                    "missing_materials (string[]), recommended_actions (string[]), "
+                    "funding_potential (string), success_probability (0-1 float)."
+                ),
+                user_prompt=(
+                    f"Profile:\n{profile_summary(match_input.profile)}\n\n"
+                    f"Opportunity:\n{opportunity_summary(match_input.opportunity)}\n\n"
+                    f"Documents:\n"
+                    f"{document_summary(match_input.resume, 'Resume')}\n"
+                    f"{document_summary(match_input.transcript, 'Transcript')}\n"
+                    f"{document_summary(match_input.personal_essay, 'Essay')}\n"
+                    f"Recommendations uploaded: {len(match_input.recommendation_letters)}"
+                ),
+            )
+            score_percent = max(0, min(100, int(data.get("score_percent", 0))))
+            score = round(score_percent / 100, 4)
+            priority_raw = str(data.get("priority", "medium")).lower()
+            priority = MatchPriority(priority_raw if priority_raw in {"low", "medium", "high"} else "medium")
+            success_probability = max(0.0, min(1.0, float(data.get("success_probability", score))))
+            return MatchScoreOutput(
+                score=score,
+                score_percent=score_percent,
+                priority=priority,
+                rationale=str(data.get("rationale", "")),
+                fit_explanation=str(data.get("fit_explanation", data.get("rationale", ""))),
+                strengths=[str(item) for item in data.get("strengths", [])][:6],
+                gaps=[str(item) for item in data.get("gaps", [])][:5],
+                missing_materials=[str(item) for item in data.get("missing_materials", [])],
+                recommended_actions=[str(item) for item in data.get("recommended_actions", [])][:5],
+                funding_potential=str(data.get("funding_potential", "")),
+                success_probability=round(success_probability, 4),
+                scoring_method="openai",
+            )
+        except Exception:
+            result = fallback.score(match_input)
+            result.scoring_method = "deterministic_fallback"
+            return result

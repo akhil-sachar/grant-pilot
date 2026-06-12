@@ -146,7 +146,37 @@ def _default_name(role: RecipientRole) -> str:
 
 
 class AIOutreachGenerator(OutreachGenerator):
-    """Placeholder for future LLM-based outreach generation."""
+    """OpenAI-powered outreach emails with Langfuse tracing."""
 
     def generate(self, outreach_input: OutreachGenerationInput) -> OutreachGenerationOutput:
-        raise NotImplementedError("AI outreach generation is not enabled yet.")
+        from app.services.llm.context import opportunity_summary, profile_summary
+        from app.services.llm.openai_service import get_openai_service
+
+        llm = get_openai_service()
+        fallback = DeterministicOutreachGenerator()
+        try:
+            data = llm.chat_json(
+                agent_name="outreach-agent",
+                action="generate_outreach",
+                system_prompt=(
+                    "Write a concise, professional outreach email from the student. "
+                    "Return JSON: subject (string), body (string), suggested_follow_up (string)."
+                ),
+                user_prompt=(
+                    f"Student profile:\n{profile_summary(outreach_input.profile)}\n\n"
+                    f"Opportunity:\n{opportunity_summary(outreach_input.opportunity)}\n\n"
+                    f"Recipient: {outreach_input.recipient_name} <{outreach_input.recipient_email}>\n"
+                    f"Role: {outreach_input.recipient_role.value}\n"
+                    f"Email type: {outreach_input.email_type.value}"
+                ),
+            )
+            return OutreachGenerationOutput(
+                subject=str(data.get("subject", f"Inquiry — {outreach_input.opportunity.title}")),
+                body=str(data.get("body", "")),
+                suggested_follow_up=str(data.get("suggested_follow_up", "")),
+                generation_method="openai",
+            )
+        except Exception:
+            result = fallback.generate(outreach_input)
+            result.generation_method = "deterministic_fallback"
+            return result

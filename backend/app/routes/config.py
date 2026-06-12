@@ -12,6 +12,10 @@ class IntegrationConfig(APIModel):
     airbyte_enabled: bool = False
     composio_enabled: bool = False
     composio_mode: str = "simulated"
+    openai_enabled: bool = False
+    openai_model: str = "gpt-4o-mini"
+    langfuse_enabled: bool = False
+    agent_generation_method: str = "auto"
     guild_ai_enabled: bool = False
     openui_enabled: bool = False
 
@@ -43,6 +47,14 @@ def read_config(settings: Settings = Depends(get_settings)) -> RuntimeConfig:
             airbyte_enabled=AirbyteService(settings=settings).is_configured,
             composio_enabled=bool(settings.composio_api_key),
             composio_mode=get_composio_service().mode.value,
+            openai_enabled=bool(settings.openai_api_key),
+            openai_model=settings.openai_model,
+            langfuse_enabled=bool(
+                settings.langfuse_enabled
+                and settings.langfuse_public_key
+                and settings.langfuse_secret_key
+            ),
+            agent_generation_method=settings.agent_generation_method,
             guild_ai_enabled=settings.guild_ai_enabled,
             openui_enabled=settings.openui_enabled,
         ),

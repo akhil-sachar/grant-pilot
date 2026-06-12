@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     notification_scan_enabled: bool = True
     notification_scan_interval_seconds: int = 180
     composio_api_key: str = ""
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    agent_generation_method: str = "auto"
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_enabled: bool = True
     guild_home: str = ".guild"
     guild_ai_enabled: bool = True
     openui_url: str = "http://localhost:7878"

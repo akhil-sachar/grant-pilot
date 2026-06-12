@@ -71,7 +71,43 @@ class DeterministicRecommendationGenerator(RecommendationGenerator):
 
 
 class AIRecommendationGenerator(RecommendationGenerator):
-    """Placeholder for future LLM-based recommendation generation."""
+    """OpenAI-powered recommendation drafts with Langfuse tracing."""
 
     def generate(self, rec_input: RecommendationGenerationInput) -> RecommendationGenerationOutput:
-        raise NotImplementedError("AI recommendation generation is not enabled yet.")
+        from app.services.llm.context import opportunity_summary, profile_summary
+        from app.services.llm.openai_service import get_openai_service
+
+        llm = get_openai_service()
+        fallback = DeterministicRecommendationGenerator()
+        try:
+            data = llm.chat_json(
+                agent_name="recommendation-agent",
+                action="generate_recommendation",
+                system_prompt=(
+                    "Draft a recommendation letter FOR the recommender to review and edit. "
+                    "Include the banner line exactly as first line: "
+                    f"\"{DRAFT_REVIEW_BANNER}\" "
+                    "Return JSON: draft_body (string), key_talking_points (string[]), why_it_matches (string)."
+                ),
+                user_prompt=(
+                    f"Student profile:\n{profile_summary(rec_input.profile)}\n\n"
+                    f"Opportunity:\n{opportunity_summary(rec_input.opportunity)}\n\n"
+                    f"Recommender: {rec_input.recommender_name} ({rec_input.recommender_type.value})\n"
+                    f"Relationship: {rec_input.relationship}\n"
+                    f"Resume excerpt:\n{rec_input.resume_text[:1500]}\n"
+                    f"Transcript excerpt:\n{rec_input.transcript_text[:1500]}"
+                ),
+            )
+            draft_body = str(data.get("draft_body", ""))
+            if DRAFT_REVIEW_BANNER not in draft_body:
+                draft_body = f"{DRAFT_REVIEW_BANNER}\n{draft_body}"
+            return RecommendationGenerationOutput(
+                draft_body=draft_body,
+                key_talking_points=[str(item) for item in data.get("key_talking_points", [])],
+                why_it_matches=str(data.get("why_it_matches", "")),
+                generation_method="openai",
+            )
+        except Exception:
+            result = fallback.generate(rec_input)
+            result.generation_method = "deterministic_fallback"
+            return result

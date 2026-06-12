@@ -23,7 +23,7 @@ def build_match_input(
 
 
 def get_match_scorer(method: str = "deterministic") -> MatchScorer:
-    if method == "ai":
+    if method in {"ai", "openai"}:
         return AIMatchScorer()
     return DeterministicMatchScorer()
 

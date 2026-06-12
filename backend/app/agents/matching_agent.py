@@ -5,6 +5,7 @@ from app.db.repository import GrantPilotRepository
 from app.db.seed_data import DEFAULT_USER_ID
 from app.models import AgentActionLog, AgentActionStatus, MatchResult, MatchStatus
 from app.services.agent_run_tracker import get_agent_run_tracker
+from app.services.llm.agent_method import resolve_generation_method
 from app.services.matching_service import score_opportunity
 
 
@@ -16,10 +17,10 @@ class MatchingAgent(BaseAgent):
     def __init__(
         self,
         repository: GrantPilotRepository,
-        scoring_method: str = "deterministic",
+        scoring_method: str | None = None,
     ):
         self.repository = repository
-        self.scoring_method = scoring_method
+        self.scoring_method = resolve_generation_method(scoring_method)
 
     async def run(self, context: AgentContext) -> AgentResult:
         return await self.match_all(context.user_id)

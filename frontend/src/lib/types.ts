@@ -288,6 +288,10 @@ export interface RuntimeConfig {
     airbyte_enabled: boolean;
     composio_enabled: boolean;
     composio_mode: string;
+    openai_enabled: boolean;
+    openai_model: string;
+    langfuse_enabled: boolean;
+    agent_generation_method: string;
     guild_ai_enabled: boolean;
     openui_enabled: boolean;
   };

@@ -19,7 +19,7 @@ _DEFAULT_RECOMMENDERS: dict[RecommenderType, tuple[str, str, str]] = {
 
 
 def get_recommendation_generator(method: str = "deterministic") -> RecommendationGenerator:
-    if method == "ai":
+    if method in {"ai", "openai"}:
         return AIRecommendationGenerator()
     return DeterministicRecommendationGenerator()
 

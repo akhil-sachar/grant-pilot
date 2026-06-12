@@ -7,6 +7,8 @@ from app.db.repository import GrantPilotRepository
 from app.models import AgentActionStatus, Opportunity
 from app.services.agent_run_tracker import get_agent_run_tracker
 from app.services.airbyte_service import AirbyteService
+from app.services.llm.agent_method import resolve_generation_method
+from app.services.sponsor.enrichment import enrich_opportunity
 from app.services.scan_state import get_scan_tracker
 
 
@@ -19,10 +21,12 @@ class SponsorAgent(BaseAgent):
         self,
         repository: GrantPilotRepository,
         airbyte_service: AirbyteService | None = None,
+        generation_method: str | None = None,
     ):
         self.repository = repository
         self.airbyte = airbyte_service or AirbyteService(repository=repository)
         self.tracker = get_scan_tracker()
+        self.generation_method = resolve_generation_method(generation_method)
 
     async def run(self, context: AgentContext) -> AgentResult:
         return await self.scan_all(context.user_id)
@@ -48,6 +52,8 @@ class SponsorAgent(BaseAgent):
             try:
                 raw_records = await self.airbyte.retrieve_records(adapter.source_name)
                 opportunities = [normalize_opportunity(record) for record in raw_records]
+                if self.generation_method == "openai":
+                    opportunities = [enrich_opportunity(item) for item in opportunities]
                 loaded = self._persist_opportunities(opportunities)
 
                 run_id = f"ingest_{adapter.source_name}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
@@ -87,6 +93,7 @@ class SponsorAgent(BaseAgent):
                 "errors": errors,
                 "sources_scanned": sources_scanned,
                 "total_loaded": total_loaded,
+                "generation_method": self.generation_method,
             },
         )
 
@@ -117,6 +124,8 @@ class SponsorAgent(BaseAgent):
         try:
             raw_records = await self.airbyte.retrieve_records(source_name)
             opportunities = [normalize_opportunity(record) for record in raw_records]
+            if self.generation_method == "openai":
+                opportunities = [enrich_opportunity(item) for item in opportunities]
             loaded = self._persist_opportunities(opportunities)
 
             run_id = f"ingest_{source_name}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"

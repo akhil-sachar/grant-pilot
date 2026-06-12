@@ -4,7 +4,7 @@ from app.services.essay.generator_base import EssayGenerationInput, EssayGenerat
 
 
 def get_essay_generator(method: str = "deterministic") -> EssayGenerator:
-    if method == "ai":
+    if method in {"ai", "openai"}:
         return AIEssayGenerator()
     return DeterministicEssayGenerator()
 

@@ -7,6 +7,7 @@ from app.db.repository import GrantPilotRepository
 from app.db.seed_data import DEFAULT_USER_ID
 from app.models import APIModel, AgentActionStatus, EmailType, OutreachEmail, OutreachEmailStatus, RecipientRole
 from app.services.agent_run_tracker import get_agent_run_tracker
+from app.services.llm.agent_method import resolve_generation_method
 from app.services.application_service import build_application_bundle
 from app.services.composio_service import ComposioActionResult, ComposioService, get_composio_service
 from app.services.outreach_service import generate_outreach_email, next_email_version, resolve_recipient
@@ -36,11 +37,11 @@ class OutreachAgent(BaseAgent):
         self,
         repository: GrantPilotRepository,
         composio: ComposioService | None = None,
-        generation_method: str = "deterministic",
+        generation_method: str | None = None,
     ):
         self.repository = repository
         self.composio = composio or get_composio_service(repository)
-        self.generation_method = generation_method
+        self.generation_method = resolve_generation_method(generation_method)
 
     async def run(self, context: AgentContext) -> AgentResult:
         if not context.application_id:

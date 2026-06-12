@@ -144,12 +144,29 @@ grant-pilot/
 | OutreachAgent | `POST /api/v1/applications/{id}/generate-outreach` | Personalized emails + Composio |
 | NotificationAgent | `POST /api/v1/notifications/run` | Actionable notifications |
 
-All runs are logged to `AgentActionLog` and tracked by **Guild AI** (`.guild/runs.jsonl`).
+All runs are logged to `AgentActionLog`, tracked by **Guild AI**, and traced in **Langfuse** when configured.
+
+## AI agents (OpenAI + Langfuse)
+
+When `OPENAI_API_KEY` is set, all six agents use OpenAI (`gpt-4o-mini` by default):
+
+| Agent | OpenAI action | Langfuse trace name |
+|-------|---------------|---------------------|
+| SponsorAgent | Enrich opportunity descriptions | `sponsor-agent:enrich_opportunity` |
+| MatchingAgent | Score fit vs profile | `matching-agent:score_opportunity` |
+| EssayAgent | Tailor essays | `essay-agent:improve_essay` |
+| RecommendationAgent | Draft recommendation letters | `recommendation-agent:generate_recommendation` |
+| OutreachAgent | Write outreach emails | `outreach-agent:generate_outreach` |
+| NotificationAgent | Polish notification copy | `notification-agent:enhance_notification` |
+
+Set `AGENT_GENERATION_METHOD=auto` (default) to use OpenAI when the key is present, or `deterministic` to force rule-based logic.
+
+If OpenAI fails, agents fall back to deterministic generators automatically.
 
 ## Key API routes
 
 - `GET /health` — liveness
-- `GET /api/v1/config` — runtime and integration flags
+- `GET /api/v1/config` — runtime and integration flags (OpenAI, Langfuse, Composio)
 - `GET /api/v1/dashboard` — metrics and ranked opportunities
 - `GET /api/v1/agent-activity` — runtime, success rate, Guild logs
 - `GET /api/v1/openui/layout` — dynamic UI component tree
@@ -162,6 +179,13 @@ Full CRUD under `/api/v1` for documents, opportunities, matches, applications, n
 
 | Variable | Description |
 |----------|-------------|
+| `OPENAI_API_KEY` | Enables OpenAI for all agents |
+| `OPENAI_MODEL` | Model name (default `gpt-4o-mini`) |
+| `AGENT_GENERATION_METHOD` | `auto`, `openai`, or `deterministic` |
+| `LANGFUSE_PUBLIC_KEY` | Langfuse project public key |
+| `LANGFUSE_SECRET_KEY` | Langfuse project secret key |
+| `LANGFUSE_HOST` | Langfuse API host (default cloud) |
+| `LANGFUSE_ENABLED` | Toggle Langfuse tracing |
 | `DEMO_MODE` | Backend demo flag; enables `/demo/run` |
 | `NEXT_PUBLIC_DEMO_MODE` | Frontend uses mock API data when `true` |
 | `GUILD_AI_ENABLED` | Track agent runs in Guild AI |

@@ -89,7 +89,39 @@ class DeterministicEssayGenerator(EssayGenerator):
 
 
 class AIEssayGenerator(EssayGenerator):
-    """Placeholder for future LLM-based essay generation."""
+    """OpenAI-powered essay tailoring with Langfuse tracing."""
 
     def generate(self, essay_input: EssayGenerationInput) -> EssayGenerationOutput:
-        raise NotImplementedError("AI essay generation is not enabled yet.")
+        from app.services.llm.openai_service import get_openai_service
+        from app.services.llm.context import opportunity_summary, profile_summary
+
+        llm = get_openai_service()
+        fallback = DeterministicEssayGenerator()
+        try:
+            data = llm.chat_json(
+                agent_name="essay-agent",
+                action="improve_essay",
+                system_prompt=(
+                    "You tailor scholarship essays for specific opportunities. "
+                    "Preserve the student's authentic voice and facts. "
+                    "Return JSON with keys: revised_essay (string), improvement_suggestions (string[]), "
+                    "change_summary (string)."
+                ),
+                user_prompt=(
+                    f"Profile:\n{profile_summary(essay_input.profile)}\n\n"
+                    f"Opportunity:\n{opportunity_summary(essay_input.opportunity)}\n\n"
+                    f"Prompt:\n{essay_input.prompt}\n\n"
+                    f"Original essay:\n{essay_input.original_essay}\n\n"
+                    f"Prior version:\n{essay_input.prior_version_content or 'none'}"
+                ),
+            )
+            return EssayGenerationOutput(
+                revised_essay=str(data.get("revised_essay", essay_input.original_essay)),
+                improvement_suggestions=[str(item) for item in data.get("improvement_suggestions", [])],
+                change_summary=str(data.get("change_summary", "OpenAI essay revision completed.")),
+                generation_method="openai",
+            )
+        except Exception:
+            result = fallback.generate(essay_input)
+            result.generation_method = "deterministic_fallback"
+            return result

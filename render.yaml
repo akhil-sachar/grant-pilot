@@ -30,6 +30,22 @@ services:
         value: true
       - key: NOTIFICATION_SCAN_INTERVAL_SECONDS
         value: 180
+      - key: COMPOSIO_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: AGENT_GENERATION_METHOD
+        value: auto
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+      - key: LANGFUSE_HOST
+        value: https://cloud.langfuse.com
+      - key: LANGFUSE_ENABLED
+        value: true
       - key: CORS_ORIGINS
         fromService:
           type: web
