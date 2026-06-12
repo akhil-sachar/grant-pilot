@@ -12,9 +12,15 @@ CREATE TABLE IF NOT EXISTS user_profiles
     date_of_birth Nullable(Date),
     education_level Nullable(String),
     school_name Nullable(String),
+    major Nullable(String),
+    gpa Nullable(Float32),
     graduation_year Nullable(UInt16),
     fields_of_study Array(String),
     career_goals Array(String),
+    research_interests Array(String),
+    awards Array(String),
+    projects Array(String),
+    leadership_experience Array(String),
     citizenship_status Nullable(String),
     funding_goals Array(String),
     demographic_info_json String,
@@ -34,14 +40,36 @@ CREATE TABLE IF NOT EXISTS uploaded_documents
     storage_uri String,
     mime_type String,
     size_bytes UInt64,
+    extracted_text Nullable(String),
     extracted_text_preview Nullable(String),
+    current_version_id Nullable(String),
+    version_number UInt16,
     tags Array(String),
     metadata_json String,
     status LowCardinality(String),
-    uploaded_at DateTime64(3, 'UTC')
+    uploaded_at DateTime64(3, 'UTC'),
+    updated_at DateTime64(3, 'UTC')
 )
-ENGINE = ReplacingMergeTree(uploaded_at)
+ENGINE = ReplacingMergeTree(updated_at)
 ORDER BY (user_id, id);
+
+CREATE TABLE IF NOT EXISTS document_versions
+(
+    id String,
+    document_id String,
+    user_id String,
+    version_number UInt16,
+    file_name String,
+    storage_uri String,
+    mime_type String,
+    size_bytes UInt64,
+    extracted_text Nullable(String),
+    extracted_text_preview Nullable(String),
+    metadata_json String,
+    created_at DateTime64(3, 'UTC')
+)
+ENGINE = ReplacingMergeTree(created_at)
+ORDER BY (document_id, version_number, id);
 
 CREATE TABLE IF NOT EXISTS opportunities
 (

@@ -13,6 +13,7 @@ from app.config import Settings
 from app.models import (
     AgentActionLog,
     Application,
+    DocumentVersion,
     EssayVersion,
     IngestionRun,
     MatchResult,
@@ -82,9 +83,15 @@ TABLES: dict[str, TableConfig] = {
             "date_of_birth",
             "education_level",
             "school_name",
+            "major",
+            "gpa",
             "graduation_year",
             "fields_of_study",
             "career_goals",
+            "research_interests",
+            "awards",
+            "projects",
+            "leadership_experience",
             "citizenship_status",
             "funding_goals",
             "demographic_info_json",
@@ -104,9 +111,15 @@ TABLES: dict[str, TableConfig] = {
             date_of_birth Nullable(Date),
             education_level Nullable(String),
             school_name Nullable(String),
+            major Nullable(String),
+            gpa Nullable(Float32),
             graduation_year Nullable(UInt16),
             fields_of_study Array(String),
             career_goals Array(String),
+            research_interests Array(String),
+            awards Array(String),
+            projects Array(String),
+            leadership_experience Array(String),
             citizenship_status Nullable(String),
             funding_goals Array(String),
             demographic_info_json String,
@@ -130,11 +143,15 @@ TABLES: dict[str, TableConfig] = {
             "storage_uri",
             "mime_type",
             "size_bytes",
+            "extracted_text",
             "extracted_text_preview",
+            "current_version_id",
+            "version_number",
             "tags",
             "metadata_json",
             "status",
             "uploaded_at",
+            "updated_at",
         ),
         order_by="uploaded_at DESC",
         ddl="""
@@ -147,14 +164,57 @@ TABLES: dict[str, TableConfig] = {
             storage_uri String,
             mime_type String,
             size_bytes UInt64,
+            extracted_text Nullable(String),
             extracted_text_preview Nullable(String),
+            current_version_id Nullable(String),
+            version_number UInt16,
             tags Array(String),
             metadata_json String,
             status LowCardinality(String),
-            uploaded_at DateTime64(3, 'UTC')
+            uploaded_at DateTime64(3, 'UTC'),
+            updated_at DateTime64(3, 'UTC')
         )
-        ENGINE = ReplacingMergeTree(uploaded_at)
+        ENGINE = ReplacingMergeTree(updated_at)
         ORDER BY (user_id, id)
+        """,
+    ),
+    "document_versions": TableConfig(
+        table_name="document_versions",
+        collection_name="document_versions",
+        model=DocumentVersion,
+        columns=(
+            "id",
+            "document_id",
+            "user_id",
+            "version_number",
+            "file_name",
+            "storage_uri",
+            "mime_type",
+            "size_bytes",
+            "extracted_text",
+            "extracted_text_preview",
+            "metadata_json",
+            "created_at",
+        ),
+        order_by="document_id, version_number DESC",
+        ddl="""
+        CREATE TABLE IF NOT EXISTS document_versions
+        (
+            id String,
+            document_id String,
+            user_id String,
+            version_number UInt16,
+            file_name String,
+            storage_uri String,
+            mime_type String,
+            size_bytes UInt64,
+            extracted_text Nullable(String),
+            extracted_text_preview Nullable(String),
+            metadata_json String,
+            created_at DateTime64(3, 'UTC')
+        )
+        ENGINE = ReplacingMergeTree(created_at)
+        ORDER BY (document_id, version_number, id)
         """,
     ),
     "opportunities": TableConfig(
@@ -492,6 +552,20 @@ MODEL_TABLES: dict[type[BaseModel], str] = {
 }
 
 
+COMPATIBILITY_ALTERS = (
+    "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS major Nullable(String)",
+    "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS gpa Nullable(Float32)",
+    "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS research_interests Array(String)",
+    "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS awards Array(String)",
+    "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS projects Array(String)",
+    "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS leadership_experience Array(String)",
+    "ALTER TABLE uploaded_documents ADD COLUMN IF NOT EXISTS extracted_text Nullable(String)",
+    "ALTER TABLE uploaded_documents ADD COLUMN IF NOT EXISTS current_version_id Nullable(String)",
+    "ALTER TABLE uploaded_documents ADD COLUMN IF NOT EXISTS version_number UInt16 DEFAULT 1",
+    "ALTER TABLE uploaded_documents ADD COLUMN IF NOT EXISTS updated_at DateTime64(3, 'UTC') DEFAULT uploaded_at",
+)
+
+
 class ClickHouseService:
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -537,6 +611,8 @@ class ClickHouseService:
         try:
             for table in TABLES.values():
                 client.command(table.ddl)
+            for statement in COMPATIBILITY_ALTERS:
+                client.command(statement)
         except Exception as exc:  # pragma: no cover - depends on external service
             raise ClickHouseStorageError("Failed to initialize ClickHouse tables") from exc
         self._initialized = True

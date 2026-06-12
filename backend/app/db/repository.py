@@ -13,6 +13,7 @@ from app.db.seed_data import DEFAULT_USER_ID, build_seed_data
 from app.models import (
     AgentActionLog,
     Application,
+    DocumentVersion,
     EssayVersion,
     IngestionRun,
     IngestionRunStatus,
@@ -195,6 +196,41 @@ class GrantPilotRepository:
             uploaded_at=datetime.now(timezone.utc),
         )
         return self.create_record(document)
+
+    def create_document_with_version(
+        self,
+        document: UploadedDocument,
+        version: DocumentVersion,
+    ) -> UploadedDocument:
+        saved_document = self.create_record(document)
+        self.create_record(version)
+        return saved_document
+
+    def update_document_with_version(
+        self,
+        document: UploadedDocument,
+        version: DocumentVersion,
+    ) -> UploadedDocument:
+        saved_document = self.update_record(
+            UploadedDocument,
+            document.id,
+            document.model_dump(mode="json"),
+        )
+        self.create_record(version)
+        return saved_document
+
+    def list_document_versions(self, document_id: str) -> list[DocumentVersion]:
+        versions = [
+            version
+            for version in self.list_records(DocumentVersion)
+            if version.document_id == document_id
+        ]
+        return sorted(versions, key=lambda version: version.version_number, reverse=True)
+
+    def delete_document(self, document_id: str) -> None:
+        for version in self.list_document_versions(document_id):
+            self.delete_record(DocumentVersion, version.id)
+        self.delete_record(UploadedDocument, document_id)
 
     def list_opportunities(self) -> list[Opportunity]:
         return self.list_records(Opportunity)

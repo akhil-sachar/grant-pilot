@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     clickhouse_fallback_enabled: bool = True
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     mock_storage_path: Path = BACKEND_DIR / ".data" / "mock_storage.json"
+    document_storage_path: Path = BACKEND_DIR / ".data" / "documents"
 
     clickhouse_host: str = "localhost"
     clickhouse_port: int = 8123
@@ -46,6 +47,13 @@ class Settings(BaseSettings):
     @field_validator("mock_storage_path", mode="after")
     @classmethod
     def resolve_mock_storage_path(cls, value: Path) -> Path:
+        if value.is_absolute():
+            return value
+        return (PROJECT_ROOT / value).resolve()
+
+    @field_validator("document_storage_path", mode="after")
+    @classmethod
+    def resolve_document_storage_path(cls, value: Path) -> Path:
         if value.is_absolute():
             return value
         return (PROJECT_ROOT / value).resolve()

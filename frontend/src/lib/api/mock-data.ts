@@ -2,6 +2,7 @@ import type {
   AgentActionLog,
   ApplicationBundle,
   DashboardResponse,
+  DocumentVersion,
   GrantApplication,
   MatchResult,
   Notification,
@@ -20,9 +21,22 @@ export const mockProfile: UserProfile = {
   date_of_birth: "2005-07-19",
   education_level: "Undergraduate sophomore",
   school_name: "Bay City College",
+  major: "Computer Science and Public Policy",
+  gpa: 3.82,
   graduation_year: 2028,
   fields_of_study: ["Computer Science", "Public Policy"],
   career_goals: ["Civic technology", "AI safety", "Public-interest software"],
+  research_interests: [
+    "Human-centered AI",
+    "Open data for local government",
+    "Scholarship access automation",
+  ],
+  awards: ["Dean's List 2025", "Bay City Civic Hackathon Winner"],
+  projects: ["Open transit delay dashboard", "Community benefits eligibility checker"],
+  leadership_experience: [
+    "Founder, Civic Tech Student Lab",
+    "Peer mentor for first-generation CS students",
+  ],
   citizenship_status: "US citizen",
   funding_goals: ["Tuition", "Research stipend", "Conference travel"],
   demographic_info: { first_generation: true, low_income: true },
@@ -108,12 +122,17 @@ export const mockDocuments: UploadedDocument[] = [
     storage_uri: "mock://documents/doc_resume/Maya_Chen_Resume.pdf",
     mime_type: "application/pdf",
     size_bytes: 242112,
+    extracted_text:
+      "Maya Chen resume. Computer science and public policy student. Projects include an open transit delay dashboard and community benefits eligibility checker.",
     extracted_text_preview:
       "Computer science student focused on civic AI prototypes and open data tools.",
+    current_version_id: "docver_resume_v1",
+    version_number: 1,
     tags: ["profile", "ready"],
     metadata: { pages: 2 },
     status: "processed",
     uploaded_at: "2026-06-04T14:00:00Z",
+    updated_at: "2026-06-04T14:00:00Z",
   },
   {
     id: "doc_transcript",
@@ -123,14 +142,81 @@ export const mockDocuments: UploadedDocument[] = [
     storage_uri: "mock://documents/doc_transcript/Unofficial_Transcript.pdf",
     mime_type: "application/pdf",
     size_bytes: 518002,
+    extracted_text:
+      "Unofficial transcript. GPA 3.82. Coursework includes data structures, policy analysis, statistics, and public sector data systems.",
     extracted_text_preview:
       "GPA 3.82, coursework includes data structures, policy analysis, statistics.",
+    current_version_id: "docver_transcript_v1",
+    version_number: 1,
     tags: ["academic", "needs-review"],
     metadata: { pages: 4 },
     status: "needs_review",
     uploaded_at: "2026-06-06T17:35:00Z",
+    updated_at: "2026-06-06T17:35:00Z",
+  },
+  {
+    id: "doc_personal_essay",
+    user_id: "usr_demo_001",
+    file_name: "Personal_Essay_Civic_AI.pdf",
+    document_type: "essay",
+    storage_uri: "mock://documents/doc_personal_essay/Personal_Essay_Civic_AI.pdf",
+    mime_type: "application/pdf",
+    size_bytes: 188440,
+    extracted_text:
+      "Personal essay draft about building civic technology after seeing neighbors struggle to find local assistance programs.",
+    extracted_text_preview:
+      "Essay draft about civic technology and access to public benefit programs.",
+    current_version_id: "docver_personal_essay_v1",
+    version_number: 1,
+    tags: ["essay", "draft"],
+    metadata: { pages: 3 },
+    status: "processed",
+    uploaded_at: "2026-06-08T13:20:00Z",
+    updated_at: "2026-06-08T13:20:00Z",
+  },
+  {
+    id: "doc_recommendation_patel",
+    user_id: "usr_demo_001",
+    file_name: "Recommendation_Dr_Patel.pdf",
+    document_type: "recommendation",
+    storage_uri: "mock://documents/doc_recommendation_patel/Recommendation_Dr_Patel.pdf",
+    mime_type: "application/pdf",
+    size_bytes: 154880,
+    extracted_text:
+      "Recommendation letter from Dr. Ana Patel highlighting research discipline, public-interest motivation, and software execution.",
+    extracted_text_preview:
+      "Letter highlighting research discipline and public-interest software work.",
+    current_version_id: "docver_recommendation_patel_v1",
+    version_number: 1,
+    tags: ["recommendation", "ready"],
+    metadata: { pages: 1 },
+    status: "processed",
+    uploaded_at: "2026-06-09T09:45:00Z",
+    updated_at: "2026-06-09T09:45:00Z",
   },
 ];
+
+export const mockDocumentVersions: Record<string, DocumentVersion[]> = Object.fromEntries(
+  mockDocuments.map((document) => [
+    document.id,
+    [
+      {
+        id: document.current_version_id ?? `${document.id}_v1`,
+        document_id: document.id,
+        user_id: document.user_id,
+        version_number: document.version_number,
+        file_name: document.file_name,
+        storage_uri: document.storage_uri,
+        mime_type: document.mime_type,
+        size_bytes: document.size_bytes,
+        extracted_text: document.extracted_text,
+        extracted_text_preview: document.extracted_text_preview,
+        metadata: document.metadata,
+        created_at: document.uploaded_at,
+      },
+    ],
+  ]),
+);
 
 export const mockMatches: MatchResult[] = [
   {

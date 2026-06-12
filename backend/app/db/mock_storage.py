@@ -37,13 +37,24 @@ class MockStorage:
         self._data = self._load_or_seed()
 
     def _load_or_seed(self) -> dict[str, list[dict]]:
+        seed_data = build_seed_data()
         if self.path.exists():
             with self.path.open("r", encoding="utf-8") as handle:
-                return json.load(handle)
+                data = json.load(handle)
+            changed = False
+            for collection, seed_records in seed_data.items():
+                existing = data.setdefault(collection, [])
+                existing_ids = {item.get("id") for item in existing}
+                for record in seed_records:
+                    if record.get("id") not in existing_ids:
+                        existing.append(record)
+                        changed = True
+            if changed:
+                self._persist(data)
+            return data
 
-        data = build_seed_data()
-        self._persist(data)
-        return data
+        self._persist(seed_data)
+        return seed_data
 
     def _persist(self, data: dict[str, list[dict]] | None = None) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)

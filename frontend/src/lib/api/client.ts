@@ -1,6 +1,7 @@
 import { appConfig } from "@/lib/config";
 import type {
   ApplicationBundle,
+  DocumentVersion,
   DashboardResponse,
   GrantApplication,
   MatchResult,
@@ -15,6 +16,7 @@ import {
   mockApplicationBundles,
   mockApplications,
   mockDashboard,
+  mockDocumentVersions,
   mockDocuments,
   mockMatches,
   mockNotifications,
@@ -61,11 +63,125 @@ export async function getProfile(): Promise<UserProfile> {
   return request<UserProfile>("/profile/me");
 }
 
+export async function updateProfile(payload: Partial<UserProfile>): Promise<UserProfile> {
+  if (appConfig.demoMode) {
+    return { ...mockProfile, ...payload };
+  }
+  const response = await fetch(`${appConfig.apiBaseUrl}/api/v1/profile/me`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`Profile update failed: ${response.status} ${response.statusText}`);
+  }
+  return response.json() as Promise<UserProfile>;
+}
+
 export async function getDocuments(): Promise<UploadedDocument[]> {
   if (appConfig.demoMode) {
     return mockDocuments;
   }
   return request<UploadedDocument[]>("/documents");
+}
+
+export async function getDocumentVersions(documentId: string): Promise<DocumentVersion[]> {
+  if (appConfig.demoMode) {
+    return mockDocumentVersions[documentId] ?? [];
+  }
+  return request<DocumentVersion[]>(`/documents/${documentId}/versions`);
+}
+
+export async function uploadDocument(
+  file: File,
+  documentType: string,
+): Promise<UploadedDocument> {
+  if (appConfig.demoMode) {
+    const now = new Date().toISOString();
+    const extractedText = await extractTextPreview(file);
+    return {
+      id: `doc_demo_${Date.now()}`,
+      user_id: "usr_demo_001",
+      file_name: file.name,
+      document_type: documentType,
+      storage_uri: `demo://${file.name}`,
+      mime_type: file.type || "application/octet-stream",
+      size_bytes: file.size,
+      extracted_text: extractedText,
+      extracted_text_preview: extractedText || "PDF uploaded. Backend extraction stores text for future agents.",
+      current_version_id: `docver_demo_${Date.now()}`,
+      version_number: 1,
+      tags: [documentType],
+      metadata: { demo_upload: true },
+      status: "processed",
+      uploaded_at: now,
+      updated_at: now,
+    };
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("document_type", documentType);
+  formData.append("tags", documentType);
+  const response = await fetch(`${appConfig.apiBaseUrl}/api/v1/documents/upload`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(`Document upload failed: ${response.status} ${response.statusText}`);
+  }
+  return response.json() as Promise<UploadedDocument>;
+}
+
+export async function uploadDocumentVersion(
+  documentId: string,
+  file: File,
+): Promise<UploadedDocument> {
+  if (appConfig.demoMode) {
+    const now = new Date().toISOString();
+    const extractedText = await extractTextPreview(file);
+    const current = mockDocuments.find((document) => document.id === documentId);
+    if (!current) {
+      throw new Error(`Unknown mock document: ${documentId}`);
+    }
+    return {
+      ...current,
+      file_name: file.name,
+      mime_type: file.type || current.mime_type,
+      size_bytes: file.size,
+      extracted_text: extractedText,
+      extracted_text_preview: extractedText || current.extracted_text_preview,
+      version_number: current.version_number + 1,
+      current_version_id: `docver_demo_${Date.now()}`,
+      updated_at: now,
+    };
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(
+    `${appConfig.apiBaseUrl}/api/v1/documents/${documentId}/versions`,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`Document version upload failed: ${response.status} ${response.statusText}`);
+  }
+  return response.json() as Promise<UploadedDocument>;
+}
+
+export async function deleteDocument(documentId: string): Promise<void> {
+  if (appConfig.demoMode) {
+    return;
+  }
+  const response = await fetch(`${appConfig.apiBaseUrl}/api/v1/documents/${documentId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Document delete failed: ${response.status} ${response.statusText}`);
+  }
 }
 
 export async function getOpportunities(): Promise<Opportunity[]> {
@@ -120,3 +236,9 @@ export async function markNotificationRead(id: string): Promise<Notification> {
   });
 }
 
+async function extractTextPreview(file: File): Promise<string> {
+  if (file.type.startsWith("text/") || file.name.toLowerCase().endsWith(".txt")) {
+    return file.text();
+  }
+  return "";
+}

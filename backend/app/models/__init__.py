@@ -14,6 +14,7 @@ from app.models.opportunity import Opportunity, OpportunityType
 from app.models.outreach_email import OutreachEmail, OutreachEmailStatus
 from app.models.recommendation_draft import RecommendationDraft, RecommendationStatus
 from app.models.uploaded_document import (
+    DocumentVersion,
     DocumentProcessingStatus,
     DocumentType,
     UploadedDocument,
@@ -31,6 +32,7 @@ __all__ = [
     "ChecklistItemStatus",
     "DocumentProcessingStatus",
     "DocumentType",
+    "DocumentVersion",
     "EssayStatus",
     "EssayVersion",
     "IngestionRun",

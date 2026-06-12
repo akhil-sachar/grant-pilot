@@ -9,9 +9,15 @@ export interface UserProfile {
   date_of_birth?: string | null;
   education_level?: string | null;
   school_name?: string | null;
+  major?: string | null;
+  gpa?: number | null;
   graduation_year?: number | null;
   fields_of_study: string[];
   career_goals: string[];
+  research_interests: string[];
+  awards: string[];
+  projects: string[];
+  leadership_experience: string[];
   citizenship_status?: string | null;
   funding_goals: string[];
   demographic_info: Metadata;
@@ -28,11 +34,30 @@ export interface UploadedDocument {
   storage_uri: string;
   mime_type: string;
   size_bytes: number;
+  extracted_text?: string | null;
   extracted_text_preview?: string | null;
+  current_version_id?: string | null;
+  version_number: number;
   tags: string[];
   metadata: Metadata;
   status: string;
   uploaded_at: string;
+  updated_at: string;
+}
+
+export interface DocumentVersion {
+  id: string;
+  document_id: string;
+  user_id: string;
+  version_number: number;
+  file_name: string;
+  storage_uri: string;
+  mime_type: string;
+  size_bytes: number;
+  extracted_text?: string | null;
+  extracted_text_preview?: string | null;
+  metadata: Metadata;
+  created_at: string;
 }
 
 export interface Opportunity {
