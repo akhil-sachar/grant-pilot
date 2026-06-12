@@ -21,9 +21,11 @@ const AGENT_LABELS: Record<string, string> = {
 export function AgentActivityDashboard({
   activity,
   openuiComponents,
+  openuiEnabled = true,
 }: {
   activity: AgentActivityResponse;
   openuiComponents?: import("@/lib/types").OpenUIComponent[];
+  openuiEnabled?: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -120,7 +122,18 @@ export function AgentActivityDashboard({
         </div>
       </section>
 
-      {openuiComponents?.length ? <OpenUIRenderer components={openuiComponents} /> : null}
+      {openuiEnabled && openuiComponents?.length ? (
+        <OpenUIRenderer components={openuiComponents} />
+      ) : openuiEnabled ? (
+        <section className="rounded-lg border border-dashed border-line bg-panel p-5 text-sm text-muted shadow-soft">
+          OpenUI layout is enabled but no components were returned.
+        </section>
+      ) : (
+        <section className="rounded-lg border border-dashed border-line bg-panel p-5 text-sm text-muted shadow-soft">
+          OpenUI is disabled in backend config (<code className="text-xs">OPENUI_ENABLED=false</code>
+          ).
+        </section>
+      )}
     </div>
   );
 }

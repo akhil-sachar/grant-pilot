@@ -6,7 +6,7 @@ from app.agents.base import AgentContext, AgentResult, BaseAgent
 from app.db.repository import GrantPilotRepository
 from app.models import AgentActionStatus, Opportunity
 from app.services.agent_run_tracker import get_agent_run_tracker
-from app.services.airbyte_service import AirbyteService
+from app.services.funding_ingestion_service import FundingIngestionService, get_funding_ingestion_service
 from app.services.llm.agent_method import resolve_generation_method
 from app.services.sponsor.enrichment import enrich_opportunity
 from app.services.scan_state import get_scan_tracker
@@ -20,11 +20,11 @@ class SponsorAgent(BaseAgent):
     def __init__(
         self,
         repository: GrantPilotRepository,
-        airbyte_service: AirbyteService | None = None,
+        ingestion_service: FundingIngestionService | None = None,
         generation_method: str | None = None,
     ):
         self.repository = repository
-        self.airbyte = airbyte_service or AirbyteService(repository=repository)
+        self.ingestion = ingestion_service or get_funding_ingestion_service()
         self.tracker = get_scan_tracker()
         self.generation_method = resolve_generation_method(generation_method)
 
@@ -40,8 +40,7 @@ class SponsorAgent(BaseAgent):
             "Scanning all configured funding sources",
         )
 
-        airbyte_mode = "airbyte" if self.airbyte.is_configured else "mock"
-        self.tracker.begin_full_scan(airbyte_mode=airbyte_mode)
+        self.tracker.begin_full_scan()
 
         total_loaded = 0
         sources_scanned = 0
@@ -50,7 +49,7 @@ class SponsorAgent(BaseAgent):
         for adapter in get_all_adapters():
             self.tracker.begin_source_scan(adapter.source_name)
             try:
-                raw_records = await self.airbyte.retrieve_records(adapter.source_name)
+                raw_records = await self.ingestion.retrieve_records(adapter.source_name)
                 opportunities = [normalize_opportunity(record) for record in raw_records]
                 if self.generation_method == "openai":
                     opportunities = [enrich_opportunity(item) for item in opportunities]
@@ -65,7 +64,7 @@ class SponsorAgent(BaseAgent):
                     status=IngestionRunStatus.COMPLETED,
                     records_seen=len(raw_records),
                     records_loaded=loaded,
-                    metadata={"mode": airbyte_mode, "agent": self.name},
+                    metadata={"mode": "adapter", "agent": self.name},
                     started_at=datetime.now(timezone.utc),
                     completed_at=datetime.now(timezone.utc),
                 )
@@ -105,7 +104,6 @@ class SponsorAgent(BaseAgent):
                 "total_loaded": total_loaded,
                 "sources_scanned": sources_scanned,
                 "errors": errors,
-                "airbyte_mode": airbyte_mode,
             },
         )
 
@@ -122,7 +120,7 @@ class SponsorAgent(BaseAgent):
 
         self.tracker.begin_source_scan(source_name)
         try:
-            raw_records = await self.airbyte.retrieve_records(source_name)
+            raw_records = await self.ingestion.retrieve_records(source_name)
             opportunities = [normalize_opportunity(record) for record in raw_records]
             if self.generation_method == "openai":
                 opportunities = [enrich_opportunity(item) for item in opportunities]
@@ -137,7 +135,7 @@ class SponsorAgent(BaseAgent):
                 status=IngestionRunStatus.COMPLETED,
                 records_seen=len(raw_records),
                 records_loaded=loaded,
-                metadata={"mode": "airbyte" if self.airbyte.is_configured else "mock"},
+                metadata={"mode": "adapter", "agent": self.name},
                 started_at=datetime.now(timezone.utc),
                 completed_at=datetime.now(timezone.utc),
             )

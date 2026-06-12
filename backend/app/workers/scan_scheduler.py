@@ -7,7 +7,6 @@ from contextlib import suppress
 from app.agents.sponsor_agent import SponsorAgent
 from app.config import get_settings
 from app.db.repository import get_repository
-from app.services.airbyte_service import AirbyteService
 from app.services.scan_state import get_scan_tracker
 from app.workers.sync_worker import WorkerRunResult
 
@@ -17,9 +16,8 @@ _scheduler_task: asyncio.Task | None = None
 
 
 async def run_sponsor_scan() -> WorkerRunResult:
-    settings = get_settings()
     repository = get_repository()
-    agent = SponsorAgent(repository, AirbyteService(settings=settings, repository=repository))
+    agent = SponsorAgent(repository)
     result = await agent.scan_all()
     return WorkerRunResult(
         worker_name="sponsor-scan",

@@ -7,6 +7,7 @@ import {
   FileText,
   Home,
   LayoutDashboard,
+  Search,
   Sparkles,
   UserRound,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/opportunities", label: "Opportunities", icon: Home },
   { href: "/applications", label: "Applications", icon: BriefcaseBusiness },
   { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/search", label: "Search", icon: Search },
 ] as const;
 
 export function SidebarNav({ mobile = false }: { mobile?: boolean }) {

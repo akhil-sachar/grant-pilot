@@ -1,7 +1,9 @@
-import { Bell, Command, Search } from "lucide-react";
+import { Bell, Command } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { GlobalSearch, MobileSearchLink } from "@/components/global-search";
+import { RuntimeModeBadge } from "@/components/runtime-mode-badge";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { appConfig } from "@/lib/config";
 import { getRuntimeConfig } from "@/lib/api/client";
@@ -19,9 +21,10 @@ export async function AppShell({ children }: { children: ReactNode }) {
           </div>
           <Link href="/dashboard" className="min-w-0">
             <p className="truncate text-lg font-semibold">{appConfig.appName}</p>
-            <p className="text-xs text-muted">
-              {runtime.demo_mode ? "Demo workspace" : runtime.app_env}
-            </p>
+            <RuntimeModeBadge
+              backendDemoMode={runtime.demo_mode}
+              openaiEnabled={runtime.integrations.openai_enabled}
+            />
           </Link>
         </div>
         <SidebarNav />
@@ -48,10 +51,8 @@ export async function AppShell({ children }: { children: ReactNode }) {
               >
                 Run demo
               </Link>
-              <div className="hidden h-10 items-center gap-2 rounded-md border border-line bg-canvas px-3 text-sm text-muted sm:flex">
-                <Search className="h-4 w-4" aria-hidden="true" />
-                <span>Search</span>
-              </div>
+              <GlobalSearch />
+              <MobileSearchLink />
               <Link
                 href="/notifications"
                 className="flex h-10 w-10 items-center justify-center rounded-md border border-line bg-panel text-muted transition hover:border-spruce hover:text-spruce"

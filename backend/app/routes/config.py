@@ -2,14 +2,12 @@ from pydantic import Field
 from fastapi import APIRouter, Depends
 
 from app.config import Settings, get_settings
-from app.services.airbyte_service import AirbyteService
 from app.services.composio_service import get_composio_service
 from app.models import APIModel
 
 
 class IntegrationConfig(APIModel):
     clickhouse_enabled: bool = False
-    airbyte_enabled: bool = False
     composio_enabled: bool = False
     composio_mode: str = "simulated"
     openai_enabled: bool = False
@@ -44,7 +42,6 @@ def read_config(settings: Settings = Depends(get_settings)) -> RuntimeConfig:
         cors_origins=settings.cors_origins,
         integrations=IntegrationConfig(
             clickhouse_enabled=settings.clickhouse_enabled,
-            airbyte_enabled=AirbyteService(settings=settings).is_configured,
             composio_enabled=bool(settings.composio_api_key),
             composio_mode=get_composio_service().mode.value,
             openai_enabled=bool(settings.openai_api_key),

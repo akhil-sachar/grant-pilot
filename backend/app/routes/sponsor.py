@@ -2,11 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.agents.base import AgentResult
 from app.agents.sponsor_agent import SponsorAgent
-from app.config import get_settings
 from app.db.repository import GrantPilotRepository, get_repository
 from app.db.seed_data import DEFAULT_USER_ID
 from app.models.sponsor_scan import SponsorScanStatus
-from app.services.airbyte_service import AirbyteService
 from app.services.scan_state import get_scan_tracker
 
 
@@ -33,11 +31,7 @@ def read_scan_status(
 async def trigger_full_scan(
     repository: GrantPilotRepository = Depends(get_repository),
 ) -> AgentResult:
-    settings = get_settings()
-    agent = SponsorAgent(
-        repository,
-        AirbyteService(settings=settings, repository=repository),
-    )
+    agent = SponsorAgent(repository)
     return await agent.scan_all(DEFAULT_USER_ID)
 
 
@@ -46,11 +40,7 @@ async def trigger_source_scan(
     source_name: str,
     repository: GrantPilotRepository = Depends(get_repository),
 ) -> AgentResult:
-    settings = get_settings()
-    agent = SponsorAgent(
-        repository,
-        AirbyteService(settings=settings, repository=repository),
-    )
+    agent = SponsorAgent(repository)
     result = await agent.scan_source(source_name, DEFAULT_USER_ID)
     if result.status == "failed" and "Unknown source" in result.summary:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=result.summary)

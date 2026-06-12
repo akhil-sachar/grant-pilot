@@ -4,7 +4,11 @@ import { Loader2, Radio, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { StatusPill } from "@/components/status-pill";
-import { getSponsorScanStatus, triggerSponsorScan } from "@/lib/api/client";
+import {
+  getSponsorScanStatus,
+  triggerSponsorScan,
+  triggerSponsorScanSource,
+} from "@/lib/api/client";
 import type { SponsorScanStatus } from "@/lib/types";
 import { formatDate, statusLabel } from "@/lib/utils";
 
@@ -13,6 +17,7 @@ const POLL_INTERVAL_MS = 5000;
 export function ScanStatusPanel() {
   const [status, setStatus] = useState<SponsorScanStatus | null>(null);
   const [isTriggering, setIsTriggering] = useState(false);
+  const [scanningSource, setScanningSource] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -42,6 +47,18 @@ export function ScanStatusPanel() {
       setError(err instanceof Error ? err.message : "Scan failed");
     } finally {
       setIsTriggering(false);
+    }
+  }
+
+  async function handleScanSource(sourceName: string) {
+    setScanningSource(sourceName);
+    try {
+      await triggerSponsorScanSource(sourceName);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Source scan failed");
+    } finally {
+      setScanningSource(null);
     }
   }
 
@@ -78,10 +95,9 @@ export function ScanStatusPanel() {
               : `Monitoring ${status?.sources.length ?? 0} sources · ${status?.total_opportunities ?? 0} opportunities indexed`}
           </p>
           <p className="mt-1 text-xs text-muted">
-            Airbyte mode: {status?.airbyte_mode ?? "mock"}
             {status?.last_full_scan_at
-              ? ` · Last scan ${formatDate(status.last_full_scan_at, "Never")}`
-              : null}
+              ? `Last scan ${formatDate(status.last_full_scan_at, "Never")}`
+              : "No full scan completed yet"}
           </p>
         </div>
         <button
@@ -95,7 +111,7 @@ export function ScanStatusPanel() {
           ) : (
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
           )}
-          Scan now
+          Scan all sources
         </button>
       </div>
 
@@ -115,8 +131,45 @@ export function ScanStatusPanel() {
               <p className="mt-1 text-xs text-muted">
                 {statusLabel(source.category)} · {source.opportunities_found} found
               </p>
+              <button
+                type="button"
+                onClick={() => void handleScanSource(source.source_name)}
+                disabled={
+                  scanningSource === source.source_name ||
+                  isTriggering ||
+                  status.is_scanning
+                }
+                className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-spruce hover:underline disabled:opacity-60"
+              >
+                {scanningSource === source.source_name ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3" />
+                )}
+                Scan source
+              </button>
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {status?.recent_ingestion_runs.length ? (
+        <div className="mt-5 border-t border-line pt-4">
+          <p className="text-xs font-semibold uppercase text-muted">Recent ingestion runs</p>
+          <div className="mt-2 space-y-2">
+            {status.recent_ingestion_runs.slice(0, 5).map((run) => (
+              <div
+                key={run.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-canvas px-3 py-2 text-xs"
+              >
+                <span className="font-medium">{run.source_name}</span>
+                <span className="text-muted">
+                  {run.records_loaded}/{run.records_seen} loaded
+                </span>
+                <StatusPill status={run.status} />
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
     </section>

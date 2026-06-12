@@ -285,7 +285,6 @@ export interface RuntimeConfig {
   cors_origins: string[];
   integrations: {
     clickhouse_enabled: boolean;
-    airbyte_enabled: boolean;
     composio_enabled: boolean;
     composio_mode: string;
     openai_enabled: boolean;
@@ -377,7 +376,44 @@ export interface SponsorScanStatus {
   total_opportunities: number;
   sources: SourceScanState[];
   recent_ingestion_runs: IngestionRun[];
-  airbyte_mode: string;
   metadata: Metadata;
   updated_at: string;
+}
+
+export interface DashboardAnalytics {
+  opportunities_found: number;
+  active_applications: number;
+  upcoming_deadlines: number;
+  match_scores: number[];
+  average_match_score: number;
+  agent_actions: number;
+  storage_mode: string;
+}
+
+export interface DemoStatus {
+  demo_mode: boolean;
+  demo_auto_run: boolean;
+  guild_ai_enabled: boolean;
+  openui_enabled: boolean;
+}
+
+export interface StorageHealth {
+  storage_mode: string;
+  primary: string | null;
+  primary_available: boolean;
+  fallback_enabled: boolean;
+  last_error: string | null;
+}
+
+export interface CreateApplicationPayload {
+  opportunity_id: string;
+  match_result_id?: string | null;
+  status?: string;
+  due_at?: string | null;
+  notes?: string | null;
+}
+
+export interface AgentResult {
+  status: string;
+  summary: string;
 }

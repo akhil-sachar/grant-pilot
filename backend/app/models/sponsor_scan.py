@@ -30,6 +30,5 @@ class SponsorScanStatus(APIModel):
     total_opportunities: int = 0
     sources: list[SourceScanState] = Field(default_factory=list)
     recent_ingestion_runs: list[IngestionRun] = Field(default_factory=list)
-    airbyte_mode: str = "mock"
     metadata: Metadata = Field(default_factory=dict)
     updated_at: datetime = Field(default_factory=utc_now)

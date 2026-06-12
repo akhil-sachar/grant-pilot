@@ -1,10 +1,52 @@
 from datetime import date, datetime, timezone
 
 from app.adapters.funding.base import FundingCategory, FundingSourceAdapter, RawFundingRecord
+from app.adapters.funding.grants_gov_client import fetch_grants_gov_records
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _grants_gov_fallback() -> list[RawFundingRecord]:
+    return [
+        RawFundingRecord(
+            external_id="gov_2026_001",
+            source_name="grants_gov",
+            category=FundingCategory.FEDERAL_GRANT,
+            provider_name="U.S. Department of Education",
+            title="Community College STEM Pathways Grant",
+            description="Supports community colleges expanding STEM enrollment and transfer pathways.",
+            opportunity_type="grant",
+            amount_min=250_000,
+            amount_max=750_000,
+            deadline=date(2026, 9, 30),
+            eligibility_summary="Accredited community colleges with demonstrated STEM enrollment growth.",
+            requirements=["Project narrative", "Budget justification", "Letters of support"],
+            source_url="https://www.grants.gov/search-results-detail/350001",
+            tags=["stem", "community-college", "federal"],
+            metadata={"live_api": False},
+            fetched_at=_now(),
+        ),
+        RawFundingRecord(
+            external_id="gov_2026_002",
+            source_name="grants_gov",
+            category=FundingCategory.FEDERAL_GRANT,
+            provider_name="U.S. Department of Energy",
+            title="Clean Energy Workforce Development NOFO",
+            description="Funds training programs for clean energy installation and grid modernization careers.",
+            opportunity_type="grant",
+            amount_min=500_000,
+            amount_max=2_000_000,
+            deadline=date(2026, 10, 15),
+            eligibility_summary="State workforce boards, nonprofits, and accredited training providers.",
+            requirements=["Workforce plan", "Partnership MOUs", "Evaluation metrics"],
+            source_url="https://www.grants.gov/search-results-detail/350002",
+            tags=["clean-energy", "workforce", "federal"],
+            metadata={"live_api": False},
+            fetched_at=_now(),
+        ),
+    ]
 
 
 class GrantsGovAdapter(FundingSourceAdapter):
@@ -12,42 +54,7 @@ class GrantsGovAdapter(FundingSourceAdapter):
     category = FundingCategory.FEDERAL_GRANT
 
     async def fetch_records(self) -> list[RawFundingRecord]:
-        return [
-            RawFundingRecord(
-                external_id="gov_2026_001",
-                source_name=self.source_name,
-                category=self.category,
-                provider_name="U.S. Department of Education",
-                title="Community College STEM Pathways Grant",
-                description="Supports community colleges expanding STEM enrollment and transfer pathways.",
-                opportunity_type="grant",
-                amount_min=250_000,
-                amount_max=750_000,
-                deadline=date(2026, 9, 30),
-                eligibility_summary="Accredited community colleges with demonstrated STEM enrollment growth.",
-                requirements=["Project narrative", "Budget justification", "Letters of support"],
-                source_url="https://www.grants.gov/search-results-detail/350001",
-                tags=["stem", "community-college", "federal"],
-                fetched_at=_now(),
-            ),
-            RawFundingRecord(
-                external_id="gov_2026_002",
-                source_name=self.source_name,
-                category=self.category,
-                provider_name="U.S. Department of Energy",
-                title="Clean Energy Workforce Development NOFO",
-                description="Funds training programs for clean energy installation and grid modernization careers.",
-                opportunity_type="grant",
-                amount_min=500_000,
-                amount_max=2_000_000,
-                deadline=date(2026, 10, 15),
-                eligibility_summary="State workforce boards, nonprofits, and accredited training providers.",
-                requirements=["Workforce plan", "Partnership MOUs", "Evaluation metrics"],
-                source_url="https://www.grants.gov/search-results-detail/350002",
-                tags=["clean-energy", "workforce", "federal"],
-                fetched_at=_now(),
-            ),
-        ]
+        return await fetch_grants_gov_records(_grants_gov_fallback())
 
 
 class NsfAdapter(FundingSourceAdapter):

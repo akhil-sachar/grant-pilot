@@ -2,16 +2,20 @@ import type {
   AgentActionLog,
   AgentActivityResponse,
   ApplicationBundle,
+  DashboardAnalytics,
   DashboardResponse,
   DemoRunResult,
+  DemoStatus,
   DocumentVersion,
   GrantApplication,
+  IngestionRun,
   MatchResult,
   Notification,
   OpenUILayout,
   Opportunity,
   RuntimeConfig,
   SponsorScanStatus,
+  StorageHealth,
   UploadedDocument,
   UserProfile,
 } from "@/lib/types";
@@ -573,7 +577,6 @@ export const mockRuntimeConfig: RuntimeConfig = {
   cors_origins: ["http://localhost:3000"],
   integrations: {
     clickhouse_enabled: false,
-    airbyte_enabled: false,
     composio_enabled: false,
     composio_mode: "simulated",
     openai_enabled: false,
@@ -658,7 +661,6 @@ export const mockSponsorScanStatus: SponsorScanStatus = {
   is_scanning: false,
   last_full_scan_at: "2026-06-12T08:00:00Z",
   total_opportunities: mockOpportunities.length,
-  airbyte_mode: "mock",
   metadata: {},
   updated_at: "2026-06-12T08:05:00Z",
   sources: [
@@ -957,3 +959,31 @@ export const mockDemoRunResult: DemoRunResult = {
   ],
   agent_actions: mockAgentActions,
 };
+
+export const mockDashboardAnalytics: DashboardAnalytics = {
+  opportunities_found: mockOpportunities.length,
+  active_applications: mockApplications.length,
+  upcoming_deadlines: mockApplications.filter((item) => item.due_at).length,
+  match_scores: mockMatches.map((match) => match.score),
+  average_match_score:
+    mockMatches.reduce((total, match) => total + match.score, 0) / mockMatches.length,
+  agent_actions: mockAgentActions.length,
+  storage_mode: "local",
+};
+
+export const mockDemoStatus: DemoStatus = {
+  demo_mode: true,
+  demo_auto_run: false,
+  guild_ai_enabled: true,
+  openui_enabled: true,
+};
+
+export const mockStorageHealth: StorageHealth = {
+  storage_mode: "local",
+  primary: "clickhouse",
+  primary_available: false,
+  fallback_enabled: true,
+  last_error: "ClickHouse is unavailable",
+};
+
+export const mockIngestionRuns: IngestionRun[] = mockSponsorScanStatus.recent_ingestion_runs;

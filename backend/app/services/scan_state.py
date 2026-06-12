@@ -14,7 +14,6 @@ class ScanStateTracker:
         self._lock = Lock()
         self._is_scanning = False
         self._last_full_scan_at: datetime | None = None
-        self._airbyte_mode = "mock"
         self._sources: dict[str, SourceScanState] = {}
         self._initialize_sources()
 
@@ -26,10 +25,9 @@ class ScanStateTracker:
                 category=adapter.category.value,
             )
 
-    def begin_full_scan(self, airbyte_mode: str = "mock") -> None:
+    def begin_full_scan(self) -> None:
         with self._lock:
             self._is_scanning = True
-            self._airbyte_mode = airbyte_mode
             for source in self._sources.values():
                 source.status = SourceScanStatus.SCANNING
                 source.error_message = None
@@ -81,7 +79,6 @@ class ScanStateTracker:
                 total_opportunities=total_opportunities,
                 sources=list(self._sources.values()),
                 recent_ingestion_runs=recent_ingestion_runs,
-                airbyte_mode=self._airbyte_mode,
                 updated_at=datetime.now(timezone.utc),
             )
 

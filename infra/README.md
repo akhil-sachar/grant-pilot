@@ -1,12 +1,10 @@
 # GrantPilot Infrastructure
 
-This folder contains service definitions and integration notes for the systems GrantPilot will use after demo mode.
+This folder contains service definitions and integration notes for the systems GrantPilot uses.
 
-- `clickhouse/schema.sql`: target analytical database schema
-- `airbyte/`: source sync planning
+- `clickhouse/schema.sql`: analytical database schema
 - `composio/`: authenticated tool execution planning
 - `guild/`: experiment tracking scaffold
 - `openui/`: UI prototyping notes
 
-The running application currently uses local mock storage. These files establish the deployment and data architecture without enabling external side effects.
-
+The running application uses ClickHouse with local mock fallback. Funding sources are ingested directly via built-in adapters.

@@ -32,10 +32,6 @@ class Settings(BaseSettings):
     clickhouse_user: str = "default"
     clickhouse_password: str = ""
 
-    airbyte_api_url: str = "http://localhost:8001/api/public/v1"
-    airbyte_api_key: str = ""
-    airbyte_workspace_id: str = ""
-    airbyte_connection_ids: dict[str, str] = Field(default_factory=dict)
     sponsor_scan_enabled: bool = True
     sponsor_scan_interval_seconds: int = 300
     notification_scan_enabled: bool = True
@@ -53,6 +49,14 @@ class Settings(BaseSettings):
     openui_url: str = "http://localhost:7878"
     openui_enabled: bool = True
     demo_auto_run: bool = False
+
+    grants_gov_live_enabled: bool = True
+    grants_gov_api_url: str = "https://api.grants.gov/v1/api/search2"
+    grants_gov_search_rows: int = 25
+    grants_gov_search_keyword: str = "education scholarship student"
+    grants_gov_opp_statuses: str = "forecasted|posted"
+    grants_gov_search_agencies: str = ""
+    grants_gov_funding_categories: str = ""
 
     @field_validator("cors_origins", mode="before")
     @classmethod

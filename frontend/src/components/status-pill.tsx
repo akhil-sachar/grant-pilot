@@ -52,6 +52,9 @@ const toneByStatus: Record<string, string> = {
   create_calendar_reminder: "bg-amber-50 text-amber-700 ring-amber-200",
   save_document: "bg-blue-50 text-blue-700 ring-blue-200",
   todo: "bg-gray-50 text-gray-600 ring-gray-200",
+  inactive: "bg-gray-50 text-gray-600 ring-gray-200",
+  degraded: "bg-amber-50 text-amber-700 ring-amber-200",
+  local: "bg-sky-50 text-sky-700 ring-sky-200",
   uploaded: "bg-sky-50 text-sky-700 ring-sky-200",
 };
 

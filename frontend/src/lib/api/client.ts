@@ -1,13 +1,18 @@
 import { appConfig } from "@/lib/config";
 import type {
   AgentActivityResponse,
+  AgentResult,
   ApplicationBundle,
   ComposioStatus,
+  CreateApplicationPayload,
+  DashboardAnalytics,
   DashboardResponse,
   DemoRunResult,
+  DemoStatus,
   DocumentVersion,
   EssayImproveResult,
   GrantApplication,
+  IngestionRun,
   MatchResult,
   Notification,
   OpenUILayout,
@@ -16,6 +21,7 @@ import type {
   RecommendationGenerateResult,
   RuntimeConfig,
   SponsorScanStatus,
+  StorageHealth,
   UploadedDocument,
   UserProfile,
 } from "@/lib/types";
@@ -25,9 +31,12 @@ import {
   mockApplicationBundles,
   mockApplications,
   mockDashboard,
+  mockDashboardAnalytics,
   mockDemoRunResult,
+  mockDemoStatus,
   mockDocumentVersions,
   mockDocuments,
+  mockIngestionRuns,
   mockMatches,
   mockNotifications,
   mockOpenUILayout,
@@ -35,6 +44,7 @@ import {
   mockProfile,
   mockRuntimeConfig,
   mockSponsorScanStatus,
+  mockStorageHealth,
 } from "./mock-data";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -66,6 +76,20 @@ export async function getDashboard(): Promise<DashboardResponse> {
     return mockDashboard;
   }
   return request<DashboardResponse>("/dashboard");
+}
+
+export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
+  if (appConfig.demoMode) {
+    return mockDashboardAnalytics;
+  }
+  return request<DashboardAnalytics>("/dashboard/analytics");
+}
+
+export async function getDemoStatus(): Promise<DemoStatus> {
+  if (appConfig.demoMode) {
+    return mockDemoStatus;
+  }
+  return request<DemoStatus>("/demo/status");
 }
 
 export async function getAgentActivity(): Promise<AgentActivityResponse> {
@@ -231,18 +255,30 @@ export async function getSponsorScanStatus(): Promise<SponsorScanStatus> {
   return request<SponsorScanStatus>("/sponsor/status");
 }
 
-export async function triggerSponsorScan(): Promise<{ status: string; summary: string }> {
+export async function triggerSponsorScan(): Promise<AgentResult> {
   if (appConfig.demoMode) {
     return { status: "completed", summary: "Demo scan completed with mock data." };
   }
-  return request<{ status: string; summary: string }>("/sponsor/scan", { method: "POST" });
+  return request<AgentResult>("/sponsor/scan", { method: "POST" });
 }
 
-export async function triggerMatching(): Promise<{ status: string; summary: string }> {
+export async function triggerSponsorScanSource(sourceName: string): Promise<AgentResult> {
+  if (appConfig.demoMode) {
+    return {
+      status: "completed",
+      summary: `Demo scan completed for ${sourceName}.`,
+    };
+  }
+  return request<AgentResult>(`/sponsor/scan/${encodeURIComponent(sourceName)}`, {
+    method: "POST",
+  });
+}
+
+export async function triggerMatching(): Promise<AgentResult> {
   if (appConfig.demoMode) {
     return { status: "completed", summary: "Demo matching completed with deterministic scores." };
   }
-  return request<{ status: string; summary: string }>("/matching/run", { method: "POST" });
+  return request<AgentResult>("/matching/run", { method: "POST" });
 }
 
 export async function getMatches(): Promise<MatchResult[]> {
@@ -268,6 +304,108 @@ export async function getApplicationBundle(id: string): Promise<ApplicationBundl
     return bundle;
   }
   return request<ApplicationBundle>(`/applications/${id}`);
+}
+
+export async function createApplication(
+  payload: CreateApplicationPayload,
+): Promise<GrantApplication> {
+  const now = new Date().toISOString();
+  const applicationId = `app_${Date.now()}`;
+
+  let opportunity: Opportunity | undefined;
+  let match: MatchResult | undefined;
+  let userId = mockProfile.id;
+
+  if (appConfig.demoMode) {
+    opportunity = mockOpportunities.find((item) => item.id === payload.opportunity_id);
+    match = mockMatches.find((item) => item.opportunity_id === payload.opportunity_id);
+  } else {
+    const [profile, opportunities, matches] = await Promise.all([
+      getProfile(),
+      getOpportunities(),
+      getMatches(),
+    ]);
+    userId = profile.id;
+    opportunity = opportunities.find((item) => item.id === payload.opportunity_id);
+    match = matches.find((item) => item.opportunity_id === payload.opportunity_id);
+  }
+
+  const body: GrantApplication = {
+    id: applicationId,
+    user_id: userId,
+    opportunity_id: payload.opportunity_id,
+    match_result_id: payload.match_result_id ?? match?.id ?? null,
+    status: payload.status ?? "planned",
+    due_at: payload.due_at ?? opportunity?.deadline ?? null,
+    submitted_at: null,
+    checklist: (opportunity?.requirements ?? ["Application form"]).map((label, index) => ({
+      id: `task_${index + 1}`,
+      label,
+      status: "todo",
+    })),
+    notes: payload.notes ?? null,
+    metadata: { created_from_ui: true },
+    created_at: now,
+    updated_at: now,
+  };
+
+  if (appConfig.demoMode) {
+    mockApplications.push(body);
+    if (opportunity) {
+      mockApplicationBundles[applicationId] = {
+        application: body,
+        opportunity,
+        essay_versions: [],
+        recommendation_drafts: [],
+        outreach_emails: [],
+      };
+    }
+    return body;
+  }
+
+  return request<GrantApplication>("/applications", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getIngestionRuns(): Promise<IngestionRun[]> {
+  if (appConfig.demoMode) {
+    return mockIngestionRuns;
+  }
+  return request<IngestionRun[]>("/ingestion-runs");
+}
+
+export async function getStorageHealth(): Promise<StorageHealth> {
+  if (appConfig.demoMode) {
+    return mockStorageHealth;
+  }
+  return request<StorageHealth>("/storage/health");
+}
+
+export async function initializeStorage(): Promise<StorageHealth> {
+  if (appConfig.demoMode) {
+    return { ...mockStorageHealth, primary_available: true, last_error: null };
+  }
+  return request<StorageHealth>("/storage/initialize", { method: "POST" });
+}
+
+export async function loadSampleData(): Promise<IngestionRun> {
+  if (appConfig.demoMode) {
+    return (
+      mockIngestionRuns[0] ?? {
+        id: "ing_demo",
+        source_name: "sample_data",
+        status: "completed",
+        records_seen: mockOpportunities.length,
+        records_loaded: mockOpportunities.length,
+        metadata: {},
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+      }
+    );
+  }
+  return request<IngestionRun>("/storage/sample-data", { method: "POST" });
 }
 
 export async function getComposioStatus(): Promise<ComposioStatus> {

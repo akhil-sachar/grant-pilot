@@ -7,13 +7,16 @@ import {
   Sparkles,
   Trophy,
 } from "lucide-react";
+import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
+import { DashboardAnalyticsPanel } from "@/components/dashboard-analytics-panel";
+import { MatchingActions } from "@/components/matching-actions";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { TagList } from "@/components/tag-list";
-import { getDashboard } from "@/lib/api/client";
+import { getDashboard, getDashboardAnalytics } from "@/lib/api/client";
 import {
   checklistProgress,
   formatCurrency,
@@ -23,7 +26,7 @@ import {
 } from "@/lib/utils";
 
 export default async function DashboardPage() {
-  const dashboard = await getDashboard();
+  const [dashboard, analytics] = await Promise.all([getDashboard(), getDashboardAnalytics()]);
   const ranked =
     dashboard.ranked_opportunities ??
     dashboard.top_matches.map((match) => ({
@@ -39,6 +42,7 @@ export default async function DashboardPage() {
       <PageHeader
         title={`Welcome back, ${dashboard.profile.full_name.split(" ")[0]}`}
         description="Opportunities ranked by probability of success, plus your application pipeline and document readiness."
+        action={<MatchingActions compact />}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -78,6 +82,14 @@ export default async function DashboardPage() {
           helper="Sponsor + matching runs"
           icon={ListChecks}
         />
+      </div>
+
+      <div className="mt-6">
+        <DashboardAnalyticsPanel analytics={analytics} />
+      </div>
+
+      <div className="mt-6">
+        <MatchingActions />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
@@ -147,6 +159,31 @@ export default async function DashboardPage() {
           </div>
         </section>
       </div>
+
+      {dashboard.recent_agent_actions.length ? (
+        <section className="mt-6 rounded-lg border border-line bg-panel shadow-soft">
+          <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
+            <h2 className="text-base font-semibold">Recent agent actions</h2>
+            <Link href="/agents" className="text-sm font-semibold text-spruce hover:underline">
+              View all
+            </Link>
+          </div>
+          <div className="divide-y divide-line">
+            {dashboard.recent_agent_actions.map((action) => (
+              <div key={action.id} className="px-5 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{action.agent_name}</span>
+                  <StatusPill status={action.status} />
+                  <span className="text-xs text-muted">{formatDate(action.created_at)}</span>
+                </div>
+                <p className="mt-2 text-sm text-muted">
+                  {action.output_summary ?? action.input_summary ?? action.action_type}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-6 rounded-lg border border-line bg-panel shadow-soft">
         <div className="border-b border-line px-5 py-4">
